@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Soạn thảo văn bản</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="3" y="2" width="15" height="20" rx="2" fill="currentColor" opacity=".25"/><path d="M6 7h9M6 11h9M6 15h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>Soạn thảo</span>
+    </div>
+    <input id="fileName" class="filename" value="Văn bản của em" aria-label="Tên tệp" />
+    <span id="saveState" class="save-state">Đã lưu tạm</span>
+    <div class="spacer"></div>
+    <label class="level">Giao diện
+      <select id="level">
+        <option value="4">Lớp 4</option>
+        <option value="5">Lớp 5</option>
+        <option value="6" selected>Lớp 6</option>
+        <option value="9">Đầy đủ</option>
+      </select>
+    </label>
+    <button id="toggleLessons" class="btn-primary">Bài tập</button>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button data-tab="file">Tệp</button>
+    <button data-tab="home" class="active">Trang chủ</button>
+    <button data-tab="insert" data-lop="5">Chèn</button>
+    <button data-tab="layout" data-lop="6">Bố cục</button>
+    <button data-tab="table" class="ctx hidden" id="tableTab">Bảng</button>
+  </nav>
+
+  <section class="ribbon">
+    <!-- TỆP -->
+    <div class="panel" data-panel="file">
+      <div class="group"><div class="row">
+        <button class="big" data-act="new"><i class="ic">＋</i>Văn bản mới</button>
+        <button class="big" data-act="open"><i class="ic">📂</i>Mở tệp .docx</button>
+        <button class="big" data-act="save"><i class="ic">💾</i>Lưu về máy (.docx)</button>
+        <button class="big" data-act="print"><i class="ic">🖨</i>In</button>
+      </div><div class="label">Tệp</div></div>
+      <input type="file" id="openInput" accept=".docx" hidden />
+    </div>
+
+    <!-- TRANG CHỦ -->
+    <div class="panel active" data-panel="home">
+      <div class="group">
+        <div class="row">
+          <button data-cmd="undo" title="Hoàn tác (Ctrl+Z)" class="undo">↶</button>
+          <button data-cmd="redo" title="Làm lại (Ctrl+Y)" class="undo">↷</button>
+        </div>
+        <div class="label">Hoàn tác</div>
+      </div>
+      <div class="group">
+        <div class="row">
+          <button data-act="paste" title="Dán (Ctrl+V)" class="tall"><i class="ic">📋</i>Dán</button>
+          <div class="col">
+            <button data-act="cut" title="Cắt (Ctrl+X)">✂ Cắt</button>
+            <button data-act="copy" title="Sao chép (Ctrl+C)">⧉ Sao chép</button>
+          </div>
+        </div>
+        <div class="label">Bộ nhớ tạm</div>
+      </div>
+      <div class="group">
+        <div class="row">
+          <select id="fontFamily" title="Phông chữ" class="w-font"></select>
+          <select id="fontSize" title="Cỡ chữ" class="w-size"></select>
+          <button data-act="grow" title="Tăng cỡ chữ"><span>A<sup>+</sup></span></button>
+          <button data-act="shrink" title="Giảm cỡ chữ"><span>A<sup>−</sup></span></button>
+        </div>
+        <div class="row">
+          <button data-cmd="bold" title="In đậm (Ctrl+B)"><b>B</b></button>
+          <button data-cmd="italic" title="In nghiêng (Ctrl+I)"><i class="serif">I</i></button>
+          <button data-cmd="underline" title="Gạch chân (Ctrl+U)"><u>U</u></button>
+          <button data-cmd="strike" title="Gạch giữa" data-lop="6"><s>ab</s></button>
+          <button data-cmd="subscript" title="Chỉ số dưới" data-lop="6"><span>x<sub>2</sub></span></button>
+          <button data-cmd="superscript" title="Chỉ số trên" data-lop="6"><span>x<sup>2</sup></span></button>
+          <span class="split">
+            <button data-act="color" title="Màu chữ" id="colorBtn"><span class="a-color">A<span class="bar" id="colorBar"></span></span></button>
+            <button data-pop="colorPop" class="caret" title="Chọn màu chữ">▾</button>
+          </span>
+          <span class="split" data-lop="6">
+            <button data-act="highlight" title="Màu tô sáng" id="hlBtn"><span class="a-color">ab<span class="bar" id="hlBar"></span></span></button>
+            <button data-pop="hlPop" class="caret" title="Chọn màu tô sáng">▾</button>
+          </span>
+          <button data-act="clearFormat" title="Xoá định dạng" data-lop="6">A<small>✕</small></button>
+        </div>
+        <div class="label">Phông chữ</div>
+      </div>
+      <div class="group">
+        <div class="row" data-lop="6">
+          <button data-act="bullet" title="Dấu đầu dòng"><svg viewBox="0 0 20 20"><circle cx="4" cy="5" r="1.6"/><circle cx="4" cy="10" r="1.6"/><circle cx="4" cy="15" r="1.6"/><path d="M8 5h9M8 10h9M8 15h9"/></svg></button>
+          <button data-act="ordered" title="Đánh số"><svg viewBox="0 0 20 20"><text x="1" y="7" font-size="6">1.</text><text x="1" y="12.5" font-size="6">2.</text><text x="1" y="18" font-size="6">3.</text><path d="M8 5h9M8 10h9M8 15h9"/></svg></button>
+          <button data-act="outdent" title="Giảm thụt lề"><svg viewBox="0 0 20 20"><path d="M3 3h14M9 8h8M9 12h8M3 17h14M6 7.5l-3 2.5 3 2.5"/></svg></button>
+          <button data-act="indent" title="Tăng thụt lề"><svg viewBox="0 0 20 20"><path d="M3 3h14M9 8h8M9 12h8M3 17h14M3 7.5l3 2.5-3 2.5"/></svg></button>
+          <select id="lineHeight" title="Giãn dòng" class="w-lh">
+            <option value="">Giãn dòng</option><option value="1">1,0</option><option value="1.15">1,15</option><option value="1.5">1,5</option><option value="2">2,0</option><option value="2.5">2,5</option><option value="3">3,0</option>
+          </select>
+        </div>
+        <div class="row">
+          <button data-align="left" title="Căn trái (Ctrl+L)"><svg viewBox="0 0 20 20"><path d="M3 4h14M3 8h9M3 12h14M3 16h9"/></svg></button>
+          <button data-align="center" title="Căn giữa (Ctrl+E)"><svg viewBox="0 0 20 20"><path d="M3 4h14M5.5 8h9M3 12h14M5.5 16h9"/></svg></button>
+          <button data-align="right" title="Căn phải (Ctrl+R)"><svg viewBox="0 0 20 20"><path d="M3 4h14M8 8h9M3 12h14M8 16h9"/></svg></button>
+          <button data-align="justify" title="Căn đều hai bên (Ctrl+J)"><svg viewBox="0 0 20 20"><path d="M3 4h14M3 8h14M3 12h14M3 16h14"/></svg></button>
+          <button data-act="paraDialog" title="Định dạng đoạn văn…" data-lop="6">¶ Đoạn…</button>
+        </div>
+        <div class="label">Đoạn văn</div>
+      </div>
+      <div class="group" data-lop="6">
+        <div class="row styles">
+          <button data-style="p" class="style-chip">Bình thường</button>
+          <button data-style="h1" class="style-chip h1">Đầu đề 1</button>
+          <button data-style="h2" class="style-chip h2">Đầu đề 2</button>
+        </div>
+        <div class="label">Kiểu</div>
+      </div>
+      <div class="group" data-lop="6">
+        <div class="col">
+          <button data-act="find" title="Tìm (Ctrl+F)">🔍 Tìm</button>
+          <button data-act="replace" title="Thay thế (Ctrl+H)">⇄ Thay thế</button>
+        </div>
+        <div class="label">Chỉnh sửa</div>
+      </div>
+    </div>
+
+    <!-- CHÈN -->
+    <div class="panel" data-panel="insert">
+      <div class="group" data-lop="6">
+        <div class="row"><button class="big" data-pop="tablePop"><i class="ic">▦</i>Bảng ▾</button></div>
+        <div class="label">Bảng</div>
+      </div>
+      <div class="group">
+        <div class="row"><button class="big" data-act="image"><i class="ic">🖼</i>Hình ảnh</button></div>
+        <div class="label">Minh hoạ</div>
+        <input type="file" id="imageInput" accept="image/*" hidden />
+      </div>
+      <div class="group" data-lop="6">
+        <div class="row">
+          <button class="big" data-act="hr"><i class="ic">―</i>Đường kẻ</button>
+          <button class="big" data-pop="symbolPop"><i class="ic">Ω</i>Kí hiệu ▾</button>
+        </div>
+        <div class="label">Khác</div>
+      </div>
+    </div>
+
+    <!-- BỐ CỤC -->
+    <div class="panel" data-panel="layout">
+      <div class="group">
+        <div class="row">
+          <button class="big" data-pop="marginPop"><i class="ic">⬚</i>Lề ▾</button>
+          <button class="big" data-pop="orientPop"><i class="ic">⇆</i>Hướng ▾</button>
+          <button class="big" data-pop="sizePop"><i class="ic">▭</i>Khổ giấy ▾</button>
+        </div>
+        <div class="label">Thiết lập trang</div>
+      </div>
+      <div class="group">
+        <div class="row">
+          <button class="big" data-act="paraDialog"><i class="ic">¶</i>Thụt lề &amp; giãn cách</button>
+        </div>
+        <div class="label">Đoạn văn</div>
+      </div>
+    </div>
+
+    <!-- BẢNG (hiện khi con trỏ trong bảng) -->
+    <div class="panel" data-panel="table">
+      <div class="group">
+        <div class="row">
+          <button data-tcmd="addRowBefore">Chèn hàng trên</button>
+          <button data-tcmd="addRowAfter">Chèn hàng dưới</button>
+          <button data-tcmd="addColumnBefore">Chèn cột trái</button>
+          <button data-tcmd="addColumnAfter">Chèn cột phải</button>
+        </div>
+        <div class="label">Hàng &amp; cột</div>
+      </div>
+      <div class="group">
+        <div class="row">
+          <button data-tcmd="deleteRow">Xoá hàng</button>
+          <button data-tcmd="deleteColumn">Xoá cột</button>
+          <button data-tcmd="deleteTable">Xoá bảng</button>
+        </div>
+        <div class="label">Xoá</div>
+      </div>
+      <div class="group">
+        <div class="row">
+          <button data-tcmd="mergeCells" title="Chọn nhiều ô (kéo chuột) rồi bấm">Gộp ô</button>
+          <button data-tcmd="splitCell">Tách ô</button>
+          <button data-tcmd="toggleHeaderRow">Hàng tiêu đề</button>
+        </div>
+        <div class="label">Gộp</div>
+      </div>
+    </div>
+  </section>
+
+  <main class="workspace">
+    <div class="scroller" id="scroller">
+      <div class="page-wrap" id="pageWrap">
+        <div class="page" id="page"><div id="editor"></div></div>
+      </div>
+    </div>
+
+    <aside class="lessons hidden" id="lessons">
+      <div class="lessons-head">
+        <strong>Bài tập thực hành</strong>
+        <button class="icon" id="closeLessons" title="Đóng">✕</button>
+      </div>
+      <div id="lessonList" class="lesson-list"></div>
+      <div id="lessonView" class="lesson-view hidden"></div>
+    </aside>
+  </main>
+
+  <footer class="statusbar">
+    <span id="pageInfo">Trang 1/1</span>
+    <span id="wordInfo">0 từ</span>
+    <span class="spacer"></span>
+    <span class="hint">Gõ tiếng Việt: bật Unikey, kiểu gõ Telex, bảng mã Unicode</span>
+    <label class="zoom">Thu phóng <input type="range" id="zoom" min="50" max="200" step="10" value="100" /> <span id="zoomVal">100%</span></label>
+  </footer>
+
+  <!-- POPOVERS -->
+  <div class="pop" id="colorPop"></div>
+  <div class="pop" id="hlPop"></div>
+  <div class="pop" id="tablePop">
+    <div class="grid-label" id="gridLabel">Chèn bảng</div>
+    <div class="grid" id="tableGrid"></div>
+    <div class="pop-row">
+      <label>Hàng <input type="number" id="tRows" min="1" max="50" value="3" /></label>
+      <label>Cột <input type="number" id="tCols" min="1" max="20" value="3" /></label>
+      <button class="btn-primary" id="tInsert">Chèn</button>
+    </div>
+  </div>
+  <div class="pop" id="symbolPop"></div>
+  <div class="pop list" id="marginPop">
+    <button data-margin="2,2,3,2"><b>Chuẩn văn bản VN</b><small>Trên 2 · Dưới 2 · Trái 3 · Phải 2 cm</small></button>
+    <button data-margin="2.54,2.54,2.54,2.54"><b>Bình thường</b><small>2,54 cm mỗi bên</small></button>
+    <button data-margin="1.27,1.27,1.27,1.27"><b>Hẹp</b><small>1,27 cm mỗi bên</small></button>
+    <button data-margin="2.54,2.54,5.08,5.08"><b>Rộng</b><small>Trái, phải 5,08 cm</small></button>
+    <button data-act="marginDialog"><b>Lề tuỳ chỉnh…</b></button>
+  </div>
+  <div class="pop list" id="orientPop">
+    <button data-orient="portrait"><b>▯ Đứng</b></button>
+    <button data-orient="landscape"><b>▭ Ngang</b></button>
+  </div>
+  <div class="pop list" id="sizePop"></div>
+
+  <!-- DIALOGS -->
+  <dialog id="paraDialog">
+    <form method="dialog">
+      <h3>Định dạng đoạn văn</h3>
+      <fieldset><legend>Căn lề</legend>
+        <select name="align"><option value="left">Trái</option><option value="center">Giữa</option><option value="right">Phải</option><option value="justify">Đều hai bên</option></select>
+      </fieldset>
+      <fieldset><legend>Thụt lề (cm)</legend>
+        <label>Bên trái <input name="indentLeft" type="number" step="0.25" min="0" /></label>
+        <label>Dòng đầu <input name="indentFirst" type="number" step="0.25" min="0" /></label>
+      </fieldset>
+      <fieldset><legend>Khoảng cách</legend>
+        <label>Trước đoạn (pt) <input name="spaceBefore" type="number" step="1" min="0" /></label>
+        <label>Sau đoạn (pt) <input name="spaceAfter" type="number" step="1" min="0" /></label>
+        <label>Giãn dòng <select name="lineHeight"><option value="">Mặc định</option><option value="1">1,0</option><option value="1.15">1,15</option><option value="1.5">1,5</option><option value="2">2,0</option><option value="2.5">2,5</option><option value="3">3,0</option></select></label>
+      </fieldset>
+      <div class="dlg-actions"><button value="cancel">Huỷ</button><button value="ok" class="btn-primary">Đồng ý</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="marginDialog">
+    <form method="dialog">
+      <h3>Lề trang (cm)</h3>
+      <fieldset class="grid2">
+        <label>Trên <input name="top" type="number" step="0.1" min="0" /></label>
+        <label>Dưới <input name="bottom" type="number" step="0.1" min="0" /></label>
+        <label>Trái <input name="left" type="number" step="0.1" min="0" /></label>
+        <label>Phải <input name="right" type="number" step="0.1" min="0" /></label>
+      </fieldset>
+      <div class="dlg-actions"><button value="cancel">Huỷ</button><button value="ok" class="btn-primary">Đồng ý</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="confirmDialog">
+    <form method="dialog">
+      <h3 id="confirmTitle">Xác nhận</h3>
+      <p id="confirmText"></p>
+      <div class="dlg-actions"><button value="cancel">Huỷ</button><button value="ok" class="btn-primary">Đồng ý</button></div>
+    </form>
+  </dialog>
+
+  <div class="findbar hidden" id="findbar">
+    <div class="find-row">
+      <input id="findText" placeholder="Tìm…" />
+      <span id="findCount" class="find-count"></span>
+      <button id="findNext" title="Tìm tiếp (Enter)">Tìm tiếp</button>
+      <label class="mc"><input type="checkbox" id="matchCase" /> Phân biệt hoa/thường</label>
+      <button class="icon" id="closeFind" title="Đóng (Esc)">✕</button>
+    </div>
+    <div class="find-row" id="replaceRow">
+      <input id="replaceText" placeholder="Thay bằng…" />
+      <button id="replaceOne">Thay thế</button>
+      <button id="replaceAll">Thay tất cả</button>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
