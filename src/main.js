@@ -104,7 +104,7 @@ function loadDoc(key, fallbackHtml, fallbackName) {
   }
   setActive(body)
   body.commands.focus('end')
-  applyPage($('#page'), page)
+  applyPage($('#pageWrap'), page)
   updateStatus()
 }
 let lessonHF = null // đầu/chân trang có sẵn của đề bài (nếu có)
@@ -364,7 +364,7 @@ function openMarginDialog() {
 }
 function setPage(patch) {
   page = { ...page, ...patch, margins: { ...page.margins, ...(patch.margins || {}) } }
-  applyPage($('#page'), page)
+  applyPage($('#pageWrap'), page)
   scheduleSave()
   updateStatus()
   syncToolbar()
