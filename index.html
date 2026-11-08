@@ -43,6 +43,11 @@
         <button class="big" data-act="save"><i class="ic">💾</i>Lưu về máy (.docx)</button>
         <button class="big" data-act="print"><i class="ic">🖨</i>In</button>
       </div><div class="label">Tệp</div></div>
+      <div class="group"><div class="row">
+        <button class="big" data-act="submit"><i class="ic">📤</i>Nộp bài</button>
+        <button class="big" data-act="student"><i class="ic">👤</i>Tên &amp; lớp</button>
+        <button class="big" data-act="submitSetup"><i class="ic">⚙</i>Cài đặt nộp bài (GV)</button>
+      </div><div class="label">Nộp bài cho thầy cô</div></div>
       <input type="file" id="openInput" accept=".docx" hidden />
     </div>
 
@@ -276,6 +281,35 @@
         <label>Phải <input name="right" type="number" step="0.1" min="0" /></label>
       </fieldset>
       <div class="dlg-actions"><button value="cancel">Huỷ</button><button value="ok" class="btn-primary">Đồng ý</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="studentDialog">
+    <form method="dialog">
+      <h3>Thông tin của em</h3>
+      <p class="dlg-note">Thầy cô dùng tên và lớp để ghi điểm. Máy sẽ nhớ cho lần sau.</p>
+      <fieldset class="col-fields">
+        <label>Họ và tên <input name="hoTen" required maxlength="60" autocomplete="off" placeholder="Nguyễn Văn An" /></label>
+        <label>Lớp <input name="lop" required maxlength="12" autocomplete="off" placeholder="6A1" /></label>
+      </fieldset>
+      <div class="dlg-actions"><button value="cancel" formnovalidate>Huỷ</button><button value="ok" class="btn-primary">Lưu</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="setupDialog">
+    <form method="dialog">
+      <h3>Cài đặt nộp bài (dành cho giáo viên)</h3>
+      <p class="dlg-note">Dán địa chỉ ứng dụng web Apps Script (kết thúc bằng <code>/exec</code>). Xem HUONG-DAN-GIAO-VIEN.md.</p>
+      <fieldset class="col-fields">
+        <label>Địa chỉ nộp bài <input name="url" type="url" placeholder="https://script.google.com/macros/s/…/exec" /></label>
+        <label>Mã bảo vệ (nếu có) <input name="khoa" maxlength="40" autocomplete="off" /></label>
+      </fieldset>
+      <div class="dlg-row"><button type="button" id="testSubmit">Kiểm tra kết nối</button><span id="testResult" class="dlg-note"></span></div>
+      <div id="linkBox" class="link-box hidden">
+        <div class="dlg-note">Gửi đường link này cho học sinh (đã kèm địa chỉ nộp bài):</div>
+        <div class="dlg-row"><input id="studentLink" readonly /><button type="button" id="copyLink">Sao chép</button></div>
+      </div>
+      <div class="dlg-actions"><button value="cancel" formnovalidate>Đóng</button><button value="ok" class="btn-primary">Lưu cài đặt</button></div>
     </form>
   </dialog>
 

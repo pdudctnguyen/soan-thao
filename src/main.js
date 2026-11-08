@@ -11,6 +11,7 @@ import { findNext, replaceAll, replaceCurrent, findAll } from './find-replace.js
 import { PAGE_SIZES, DEFAULT_PAGE, applyPage } from './page.js'
 import { LESSONS } from './lessons.js'
 import { checkExercise, DEFAULT_RUN } from './checker.js'
+import { loadSubmitConfig, saveSubmitConfig, studentLink, getStudent, setStudent, submit } from './submit.js'
 
 const $ = (s, r = document) => r.querySelector(s)
 const $$ = (s, r = document) => [...r.querySelectorAll(s)]
@@ -244,6 +245,9 @@ const ACTIONS = {
   image: () => $('#imageInput').click(),
   hr: () => editor.chain().focus().setHorizontalRule().run(),
   marginDialog: openMarginDialog,
+  submit: () => doSubmit(),
+  student: () => askStudent(),
+  submitSetup: openSetup,
 }
 $$('[data-act]').forEach((b) => b.addEventListener('click', () => ACTIONS[b.dataset.act]()))
 
@@ -565,7 +569,13 @@ function openLesson(l) {
     <div class="lesson-actions">
       <button id="resetLesson">Làm lại từ đầu</button>
       <button id="checkLesson" class="btn-primary">Kiểm tra</button>
+    </div>
+    <div class="lesson-actions submit-row ${submitCfg ? '' : 'hidden'}">
+      <span class="student-chip" id="studentChip"></span>
+      <button id="submitLesson" class="btn-primary submit-btn">Nộp bài</button>
     </div>`
+  renderStudentChip()
+  $('#submitLesson').onclick = () => doSubmit()
   $('#backToList').onclick = closeLesson
   $('#resetLesson').onclick = async () => {
     if (!(await confirmBox('Làm lại', 'Xoá bài đang làm và bắt đầu lại?'))) return
@@ -594,6 +604,7 @@ function runCheck() {
     done[l.id] = true
     storage.set('stt:done', done)
   }
+  return res
 }
 function closeLesson() {
   saveNow()
@@ -602,6 +613,119 @@ function closeLesson() {
   $('#lessonList').classList.remove('hidden')
   renderLessonList()
   loadDoc('stt:free', '<p></p>', 'Văn bản của em')
+}
+
+// ---------------- Nộp bài ----------------
+let submitCfg = loadSubmitConfig()
+// ẩn địa chỉ nộp bài khỏi thanh địa chỉ sau khi đã nhớ
+if (new URLSearchParams(location.search).get('nop')) history.replaceState(null, '', location.pathname)
+
+function renderStudentChip() {
+  const chip = $('#studentChip')
+  if (!chip) return
+  const st = getStudent()
+  chip.innerHTML = st ? 'Em: <b></b> · <span></span> <button type="button">đổi</button>' : '<button type="button">Nhập tên và lớp</button>'
+  if (st) {
+    $('b', chip).textContent = st.hoTen
+    $('span', chip).textContent = st.lop
+  }
+  $('button', chip).onclick = () => askStudent()
+}
+
+function askStudent() {
+  const d = $('#studentDialog')
+  const f = $('form', d)
+  const st = getStudent() || {}
+  f.hoTen.value = st.hoTen || ''
+  f.lop.value = st.lop || ''
+  d.showModal()
+  return new Promise((resolve) => {
+    d.onclose = () => {
+      if (d.returnValue !== 'ok') return resolve(getStudent())
+      const v = { hoTen: f.hoTen.value.trim().replace(/\s+/g, ' '), lop: f.lop.value.trim().toUpperCase() }
+      if (v.hoTen && v.lop) setStudent(v)
+      renderStudentChip()
+      resolve(getStudent())
+    }
+  })
+}
+
+let sending = false
+async function doSubmit() {
+  if (sending) return
+  if (!submitCfg?.url) return toast('Thầy cô chưa cài đặt nộp bài. Hãy mở bằng đường link thầy cô gửi.')
+  let st = getStudent()
+  if (!st) st = await askStudent()
+  if (!st) return
+  const what = currentLesson ? `bài “${currentLesson.title}”` : 'văn bản này'
+  if (!(await confirmBox('Nộp bài', `${st.hoTen} (${st.lop}) nộp ${what} cho thầy cô?`))) return
+  sending = true
+  const btns = $$('[data-act="submit"], #submitLesson')
+  btns.forEach((b) => (b.disabled = true))
+  toast('Đang nộp bài…')
+  try {
+    saveNow()
+    const results = currentLesson ? runCheck() : null
+    const { exportDocx } = await import('./export-docx.js')
+    const docxBlob = await exportDocx(editor.getJSON(), page, DEFAULTS)
+    const r = await submit(submitCfg, st, { lesson: currentLesson, results, docxBlob, fileName: $('#fileName').value.trim() || 'van-ban' })
+    if (r.ok) toast(r.confirmed ? 'Nộp bài thành công!' : 'Đã gửi bài. Nếu thầy cô chưa nhận được, em nộp lại nhé.')
+    else toast(`Chưa nộp được: ${r.error}`)
+  } catch (err) {
+    console.error(err)
+    toast('Chưa nộp được bài, em thử lại nhé.')
+  } finally {
+    sending = false
+    btns.forEach((b) => (b.disabled = false))
+  }
+}
+
+function openSetup() {
+  const d = $('#setupDialog')
+  const f = $('form', d)
+  f.url.value = submitCfg?.url || ''
+  f.khoa.value = submitCfg?.khoa || ''
+  $('#testResult').textContent = ''
+  const showLink = () => {
+    const url = f.url.value.trim()
+    $('#linkBox').classList.toggle('hidden', !url)
+    if (url) $('#studentLink').value = studentLink({ url, khoa: f.khoa.value.trim() })
+  }
+  f.url.oninput = showLink
+  f.khoa.oninput = showLink
+  showLink()
+  $('#copyLink').onclick = async () => {
+    try {
+      await navigator.clipboard.writeText($('#studentLink').value)
+      $('#copyLink').textContent = 'Đã chép ✓'
+    } catch {
+      $('#studentLink').select()
+    }
+    setTimeout(() => ($('#copyLink').textContent = 'Sao chép'), 1500)
+  }
+  $('#testSubmit').onclick = async () => {
+    const url = f.url.value.trim()
+    if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(url)) {
+      $('#testResult').textContent = '✗ Địa chỉ phải bắt đầu bằng https://script.google.com/'
+      return
+    }
+    $('#testResult').textContent = 'Đang thử…'
+    try {
+      const data = await (await fetch(url)).json()
+      $('#testResult').textContent = data.ok ? '✓ Kết nối được.' : '✗ Máy chủ trả lời lạ.'
+    } catch {
+      $('#testResult').textContent = '✗ Không kết nối được. Kiểm tra quyền “Bất kỳ ai” khi triển khai.'
+    }
+  }
+  d.showModal()
+  d.onclose = () => {
+    if (d.returnValue !== 'ok') return
+    const url = f.url.value.trim()
+    submitCfg = url ? { url, khoa: f.khoa.value.trim() } : null
+    saveSubmitConfig(submitCfg)
+    $$('.submit-row').forEach((el) => el.classList.toggle('hidden', !submitCfg))
+    toast(url ? 'Đã lưu cài đặt nộp bài.' : 'Đã tắt nộp bài.')
+  }
 }
 
 // ---------------- Thông báo ----------------
