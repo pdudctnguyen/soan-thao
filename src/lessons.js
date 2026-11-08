@@ -13,6 +13,9 @@
 //   table {rows, cols, merged, filled, cellText:[...]}
 //   image {min}
 //   page {orientation:'portrait|landscape', size:'A4', top, bottom, left, right}
+//   list {..., level:1|2, style:'upper-roman|check|…'}  image {wrap:'left|right|any', maxWidth(px)}
+//   header / footer {text, pageNumber:true, align, format:{italic…}}   titlePage {value:true}
+// Đề có thể có sẵn đầu/chân trang: startHeader, startFooter (HTML), startPage ({titlePage…})
 
 export const LESSONS = [
   // ===================== LỚP 4 =====================
@@ -198,6 +201,70 @@ export const LESSONS = [
     steps: [
       { text: 'Mũ, Nước uống, Áo mưa: dấu đầu dòng', check: { type: 'list', texts: ['Mũ', 'Nước uống', 'Áo mưa'], kind: 'bullet' } },
       { text: 'Ba bước rửa tay: đánh số', check: { type: 'list', texts: ['Làm ướt tay', 'Xoa xà phòng', 'Rửa sạch và lau khô'], kind: 'ordered' } },
+    ],
+  },
+  // ===================== LỚP 8 (Tự chọn 1) =====================
+  {
+    id: 'l8-8a-danh-sach',
+    lop: 8,
+    bai: 'Bài 8a. Làm việc với danh sách dạng liệt kê và hình ảnh trong văn bản',
+    title: 'Danh sách nhiều mức',
+    intro:
+      'Trình bày kế hoạch thành danh sách 2 mức. Mức 1 đánh số kiểu I, II; mức 2 dùng dấu tích ✓. Mẹo: chọn các dòng mức 2 rồi nhấn Tab (hoặc nút Tăng thụt lề) để lùi vào một mức.',
+    start:
+      '<p><strong>KẾ HOẠCH THAM QUAN</strong></p><p>Chuẩn bị</p><p>Mũ, áo mưa</p><p>Nước uống, đồ ăn nhẹ</p><p>Lịch trình</p><p>Sáng: tham quan bảo tàng</p><p>Chiều: dã ngoại ở công viên</p>',
+    show: '<p>I. Chuẩn bị<br>&nbsp;&nbsp;&nbsp;✓ Mũ, áo mưa<br>&nbsp;&nbsp;&nbsp;✓ Nước uống, đồ ăn nhẹ<br>II. Lịch trình<br>&nbsp;&nbsp;&nbsp;✓ Sáng: tham quan bảo tàng<br>&nbsp;&nbsp;&nbsp;✓ Chiều: dã ngoại ở công viên</p>',
+    steps: [
+      { text: '“Chuẩn bị”, “Lịch trình” là mức 1, được đánh số', check: { type: 'list', texts: ['Chuẩn bị', 'Lịch trình'], kind: 'ordered', level: 1 } },
+      { text: 'Mức 1 đánh số kiểu I, II, III', check: { type: 'list', texts: ['Chuẩn bị', 'Lịch trình'], kind: 'ordered', style: 'upper-roman', styleName: 'I, II, III' } },
+      { text: 'Bốn dòng chi tiết là mức 2, có dấu đầu dòng', check: { type: 'list', texts: ['Mũ, áo mưa', 'Nước uống', 'Sáng: tham quan', 'Chiều: dã ngoại'], kind: 'bullet', level: 2 } },
+      { text: 'Mức 2 dùng dấu tích ✓', check: { type: 'list', texts: ['Mũ, áo mưa', 'Nước uống', 'Sáng: tham quan', 'Chiều: dã ngoại'], kind: 'bullet', style: 'check', styleName: 'dấu tích ✓' } },
+    ],
+  },
+  {
+    id: 'l8-8a-hinh-anh',
+    lop: 8,
+    bai: 'Bài 8a. Làm việc với danh sách dạng liệt kê và hình ảnh trong văn bản',
+    title: 'Ảnh có chữ bao quanh',
+    intro:
+      'Chèn một ảnh vào đầu đoạn văn. Bấm chọn ảnh → tab Ảnh → chọn “Chữ bao quanh”, rồi thu nhỏ ảnh (kéo góc ảnh hoặc chọn ⅓ trang) cho chữ chạy bên cạnh.',
+    start:
+      '<p style="text-align: center"><strong>VỊNH HẠ LONG</strong></p><p style="text-align: justify">Vịnh Hạ Long thuộc tỉnh Quảng Ninh, là một trong những kì quan thiên nhiên nổi tiếng của Việt Nam. Vịnh có gần hai nghìn hòn đảo lớn nhỏ với nhiều hình dáng độc đáo như hòn Gà Chọi, hòn Đỉnh Hương. Năm 1994, Vịnh Hạ Long được UNESCO công nhận là Di sản thiên nhiên thế giới. Mỗi năm có hàng triệu du khách trong và ngoài nước đến tham quan, khám phá các hang động kì vĩ như hang Sửng Sốt, động Thiên Cung.</p>',
+    steps: [
+      { text: 'Chèn ít nhất 1 ảnh', check: { type: 'image', min: 1 } },
+      { text: 'Ảnh đặt kiểu “Chữ bao quanh”', check: { type: 'image', wrap: 'any' } },
+      { text: 'Ảnh rộng không quá nửa trang', check: { type: 'image', maxWidth: 310 } },
+    ],
+  },
+  {
+    id: 'l8-9a-dau-chan-trang',
+    lop: 8,
+    bai: 'Bài 9a. Tạo đầu trang, chân trang cho văn bản',
+    title: 'Đầu trang và số trang',
+    intro:
+      'Tab Chèn → Đầu trang: gõ “Bản tin lớp 8A”, căn phải, in nghiêng. Sau đó Chèn → Số trang → Chân trang – ở giữa. Xong bấm “Đóng đầu trang và chân trang” (hoặc nhấn Esc).',
+    start:
+      '<p style="text-align: center"><strong>BẢN TIN LỚP 8A</strong></p><p>Tháng này lớp em tổ chức thành công buổi sinh hoạt chủ đề “Em yêu khoa học”.</p><p>Các bạn đã trình bày nhiều sản phẩm sáng tạo như mô hình nhà thông minh, máy lọc nước mini.</p>',
+    steps: [
+      { text: 'Đầu trang có dòng “Bản tin lớp 8A”', check: { type: 'header', text: 'Bản tin lớp 8A' } },
+      { text: 'Dòng đầu trang căn phải', check: { type: 'header', text: 'Bản tin lớp 8A', align: 'right' } },
+      { text: 'Dòng đầu trang in nghiêng', check: { type: 'header', text: 'Bản tin lớp 8A', format: { italic: true } } },
+      { text: 'Chân trang có số trang ở giữa', check: { type: 'footer', pageNumber: true, align: 'center' } },
+    ],
+  },
+  {
+    id: 'l8-9a-trang-bia',
+    lop: 8,
+    bai: 'Bài 9a. Tạo đầu trang, chân trang cho văn bản',
+    title: 'Trang bìa không đánh số',
+    intro:
+      'Văn bản có trang bìa riêng (đã ngắt trang sẵn). Hãy đánh số trang ở chân trang, bên phải, rồi bật “Trang đầu khác” để trang bìa không có số trang.',
+    start:
+      '<p></p><p></p><p style="text-align: center"><span style="font-size: 26pt"><strong>BÁO CÁO DỰ ÁN</strong></span></p><p style="text-align: center"><span style="font-size: 18pt">Tìm hiểu nghề nghiệp trong lĩnh vực tin học</span></p><p></p><p style="text-align: center">Nhóm 3 – Lớp 8A</p><div data-page-break></div><p><strong>1. Mục tiêu</strong></p><p>Tìm hiểu một số nghề liên quan đến tin học và kĩ năng cần có.</p><p><strong>2. Kết quả</strong></p><p>Nhóm đã phỏng vấn ba anh chị đang làm lập trình viên, kĩ thuật viên và thiết kế đồ hoạ.</p>',
+    steps: [
+      { text: 'Chân trang có số trang', check: { type: 'footer', pageNumber: true } },
+      { text: 'Số trang nằm bên phải', check: { type: 'footer', pageNumber: true, align: 'right' } },
+      { text: 'Bật “Trang đầu khác”', check: { type: 'titlePage', value: true } },
     ],
   },
 ]

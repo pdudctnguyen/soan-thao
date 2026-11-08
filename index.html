@@ -20,6 +20,7 @@
         <option value="4">Lớp 4</option>
         <option value="5">Lớp 5</option>
         <option value="6" selected>Lớp 6</option>
+        <option value="8">Lớp 8</option>
         <option value="9">Đầy đủ</option>
       </select>
     </label>
@@ -32,6 +33,8 @@
     <button data-tab="insert" data-lop="5">Chèn</button>
     <button data-tab="layout" data-lop="6">Bố cục</button>
     <button data-tab="table" class="ctx hidden" id="tableTab">Bảng</button>
+    <button data-tab="image" class="ctx hidden" id="imageTab">Ảnh</button>
+    <button data-tab="hf" class="ctx hidden" id="hfTab">Đầu trang &amp; Chân trang</button>
   </nav>
 
   <section class="ribbon">
@@ -98,8 +101,14 @@
       </div>
       <div class="group">
         <div class="row" data-lop="6">
-          <button data-act="bullet" title="Dấu đầu dòng"><svg viewBox="0 0 20 20"><circle cx="4" cy="5" r="1.6"/><circle cx="4" cy="10" r="1.6"/><circle cx="4" cy="15" r="1.6"/><path d="M8 5h9M8 10h9M8 15h9"/></svg></button>
-          <button data-act="ordered" title="Đánh số"><svg viewBox="0 0 20 20"><text x="1" y="7" font-size="6">1.</text><text x="1" y="12.5" font-size="6">2.</text><text x="1" y="18" font-size="6">3.</text><path d="M8 5h9M8 10h9M8 15h9"/></svg></button>
+          <span class="split">
+            <button data-act="bullet" title="Dấu đầu dòng"><svg viewBox="0 0 20 20"><circle cx="4" cy="5" r="1.6"/><circle cx="4" cy="10" r="1.6"/><circle cx="4" cy="15" r="1.6"/><path d="M8 5h9M8 10h9M8 15h9"/></svg></button>
+            <button data-pop="bulletPop" class="caret" title="Chọn kiểu dấu đầu dòng" data-lop="8">▾</button>
+          </span>
+          <span class="split">
+            <button data-act="ordered" title="Đánh số"><svg viewBox="0 0 20 20"><text x="1" y="7" font-size="6">1.</text><text x="1" y="12.5" font-size="6">2.</text><text x="1" y="18" font-size="6">3.</text><path d="M8 5h9M8 10h9M8 15h9"/></svg></button>
+            <button data-pop="numberPop" class="caret" title="Chọn kiểu số" data-lop="8">▾</button>
+          </span>
           <button data-act="outdent" title="Giảm thụt lề"><svg viewBox="0 0 20 20"><path d="M3 3h14M9 8h8M9 12h8M3 17h14M6 7.5l-3 2.5 3 2.5"/></svg></button>
           <button data-act="indent" title="Tăng thụt lề"><svg viewBox="0 0 20 20"><path d="M3 3h14M9 8h8M9 12h8M3 17h14M3 7.5l3 2.5-3 2.5"/></svg></button>
           <select id="lineHeight" title="Giãn dòng" class="w-lh">
@@ -143,10 +152,19 @@
         <div class="label">Minh hoạ</div>
         <input type="file" id="imageInput" accept="image/*" hidden />
       </div>
+      <div class="group" data-lop="8">
+        <div class="row">
+          <button class="big" data-act="editHeader"><i class="ic">▔</i>Đầu trang</button>
+          <button class="big" data-act="editFooter"><i class="ic">▁</i>Chân trang</button>
+          <button class="big" data-pop="pageNumPop"><i class="ic">#</i>Số trang ▾</button>
+        </div>
+        <div class="label">Đầu trang &amp; Chân trang</div>
+      </div>
       <div class="group" data-lop="6">
         <div class="row">
           <button class="big" data-act="hr"><i class="ic">―</i>Đường kẻ</button>
           <button class="big" data-pop="symbolPop"><i class="ic">Ω</i>Kí hiệu ▾</button>
+          <button class="big" data-act="pageBreak" data-lop="8" title="Ngắt trang (Ctrl+Enter)"><i class="ic">⤓</i>Ngắt trang</button>
         </div>
         <div class="label">Khác</div>
       </div>
@@ -198,12 +216,60 @@
         <div class="label">Gộp</div>
       </div>
     </div>
+    <!-- ẢNH (hiện khi chọn một ảnh) -->
+    <div class="panel" data-panel="image">
+      <div class="group">
+        <div class="row">
+          <button class="big" data-wrap="inline"><i class="ic">▣</i>Cùng dòng<br>với chữ</button>
+          <button class="big" data-wrap="left"><i class="ic">◧</i>Chữ bao quanh<br>(ảnh bên trái)</button>
+          <button class="big" data-wrap="right"><i class="ic">◨</i>Chữ bao quanh<br>(ảnh bên phải)</button>
+        </div>
+        <div class="label">Bố trí ảnh với chữ</div>
+      </div>
+      <div class="group">
+        <div class="row">
+          <button data-imgsize="0.25">¼ trang</button>
+          <button data-imgsize="0.33">⅓ trang</button>
+          <button data-imgsize="0.5">½ trang</button>
+          <button data-imgsize="1">Cả bề ngang</button>
+        </div>
+        <div class="label">Kích thước (hoặc kéo góc ảnh)</div>
+      </div>
+    </div>
+
+    <!-- ĐẦU TRANG & CHÂN TRANG (hiện khi đang sửa) -->
+    <div class="panel" data-panel="hf">
+      <div class="group">
+        <div class="row">
+          <button class="big" data-pop="pageNumPop"><i class="ic">#</i>Số trang ▾</button>
+        </div>
+        <div class="label">Chèn</div>
+      </div>
+      <div class="group">
+        <div class="row">
+          <button class="big" data-act="gotoHeader"><i class="ic">▔</i>Đến đầu trang</button>
+          <button class="big" data-act="gotoFooter"><i class="ic">▁</i>Đến chân trang</button>
+        </div>
+        <div class="label">Di chuyển</div>
+      </div>
+      <div class="group">
+        <div class="row"><label class="chk"><input type="checkbox" id="titlePage" /> Trang đầu khác<br><small>(trang 1 không có đầu/chân trang)</small></label></div>
+        <div class="label">Tuỳ chọn</div>
+      </div>
+      <div class="group">
+        <div class="row"><button class="big close-hf" data-act="closeHF"><i class="ic">✕</i>Đóng đầu trang<br>và chân trang</button></div>
+        <div class="label">Đóng</div>
+      </div>
+    </div>
   </section>
 
   <main class="workspace">
     <div class="scroller" id="scroller">
       <div class="page-wrap" id="pageWrap">
+        <div class="sheets" id="sheets"></div>
         <div class="page" id="page"><div id="editor"></div></div>
+        <div class="hf hf-header" id="hfHeader"><span class="hf-label">Đầu trang</span><div id="headerEditor"></div></div>
+        <div class="hf hf-footer" id="hfFooter"><span class="hf-label">Chân trang</span><div id="footerEditor"></div></div>
       </div>
     </div>
 
@@ -250,6 +316,19 @@
     <button data-orient="landscape"><b>▭ Ngang</b></button>
   </div>
   <div class="pop list" id="sizePop"></div>
+  <div class="pop" id="bulletPop"></div>
+  <div class="pop" id="numberPop"></div>
+  <div class="pop list" id="pageNumPop">
+    <div class="pop-title">Đầu trang</div>
+    <button data-pn="header,left"><b>Số trang – bên trái</b></button>
+    <button data-pn="header,center"><b>Số trang – ở giữa</b></button>
+    <button data-pn="header,right"><b>Số trang – bên phải</b></button>
+    <div class="pop-title">Chân trang</div>
+    <button data-pn="footer,left"><b>Số trang – bên trái</b></button>
+    <button data-pn="footer,center"><b>Số trang – ở giữa</b></button>
+    <button data-pn="footer,right"><b>Số trang – bên phải</b></button>
+    <button data-pn="footer,center,of"><b>“Trang 1/3” – ở giữa</b></button>
+  </div>
 
   <!-- DIALOGS -->
   <dialog id="paraDialog">

@@ -1,14 +1,21 @@
 import {
   AlignmentType, Document, HeadingLevel, ImageRun, LevelFormat, Packer, PageOrientation, Paragraph,
   ShadingType, Table, TableCell, TableRow, TextRun, WidthType, BorderStyle, convertMillimetersToTwip,
+  Header, Footer, PageNumber, PageBreak, HorizontalPositionAlign, HorizontalPositionRelativeFrom, VerticalPositionRelativeFrom,
+  TextWrappingType, TextWrappingSide,
 } from 'docx'
+import { BULLET_STYLES, NUMBER_STYLES } from './extensions.js'
 import { PAGE_SIZES } from './page.js'
 
 const ALIGN = { left: AlignmentType.LEFT, center: AlignmentType.CENTER, right: AlignmentType.RIGHT, justify: AlignmentType.JUSTIFIED }
 const HEADINGS = [null, HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3]
 const cmToTwip = (cm) => convertMillimetersToTwip(cm * 10)
+const NUM_FORMAT = {
+  decimal: LevelFormat.DECIMAL, 'lower-alpha': LevelFormat.LOWER_LETTER, 'upper-alpha': LevelFormat.UPPER_LETTER,
+  'lower-roman': LevelFormat.LOWER_ROMAN, 'upper-roman': LevelFormat.UPPER_ROMAN,
+}
 
-export async function exportDocx(json, page, defaults) {
+export async function exportDocx(json, page, defaults, hf = {}) {
   let listInstance = 0
   const ctx = { defaults }
 
@@ -17,6 +24,7 @@ export async function exportDocx(json, page, defaults) {
     for (const n of nodes) {
       if (n.type === 'text') runs.push(new TextRun(runProps(n.text, n.marks, defaults)))
       else if (n.type === 'hardBreak') runs.push(new TextRun({ break: 1 }))
+      else if (n.type === 'pageNumber') runs.push(new TextRun({ ...runProps('', [], defaults), text: undefined, children: [n.attrs?.kind === 'total' ? PageNumber.TOTAL_PAGES : PageNumber.CURRENT] }))
       else if (n.type === 'image') {
         const img = await imageRun(n.attrs, page)
         if (img) runs.push(img)
@@ -53,8 +61,10 @@ export async function exportDocx(json, page, defaults) {
       case 'bulletList':
       case 'orderedList': {
         const level = list ? Math.min(list.level + 1, 8) : 0
-        const ref = node.type === 'bulletList' ? 'bullet' : 'ordered'
-        const instance = ref === 'ordered' && level === 0 ? ++listInstance : list?.instance ?? 0
+        const kind = node.type === 'bulletList' ? 'bullet' : 'ordered'
+        const style = node.attrs?.listStyle || (kind === 'bullet' ? ['disc', 'circle', 'square'][level % 3] : 'decimal')
+        const ref = `${kind}-${style}`
+        const instance = kind === 'ordered' && level === 0 ? ++listInstance : list?.instance ?? 0
         for (const item of node.content || []) {
           for (const child of item.content || []) {
             if (child.type === 'paragraph') out.push(await paragraph(child, { numbering: { reference: ref, level, instance } }))
@@ -66,6 +76,9 @@ export async function exportDocx(json, page, defaults) {
       case 'table':
         out.push(await table(node))
         out.push(new Paragraph({}))
+        break
+      case 'pageBreak':
+        out.push(new Paragraph({ children: [new PageBreak()] }))
         break
       case 'horizontalRule':
         out.push(new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '999999', space: 1 } } }))
@@ -102,6 +115,19 @@ export async function exportDocx(json, page, defaults) {
 
   const children = []
   for (const n of json.content || []) await block(n, children)
+  async function hfChildren(doc) {
+    const out = []
+    for (const n of doc?.content || []) await block(n, out)
+    return out
+  }
+  const headers = {}
+  const footers = {}
+  if (hf.header) headers.default = new Header({ children: await hfChildren(hf.header) })
+  if (hf.footer) footers.default = new Footer({ children: await hfChildren(hf.footer) })
+  if (page.titlePage) {
+    headers.first = new Header({ children: [new Paragraph({})] })
+    footers.first = new Footer({ children: [new Paragraph({})] })
+  }
 
   const size = PAGE_SIZES[page.size] || PAGE_SIZES.A4
   const landscape = page.orientation === 'landscape'
@@ -111,20 +137,20 @@ export async function exportDocx(json, page, defaults) {
     },
     numbering: {
       config: [
-        {
-          reference: 'bullet',
+        ...Object.entries(BULLET_STYLES).map(([k, v]) => ({
+          reference: `bullet-${k}`,
           levels: [0, 1, 2, 3, 4, 5, 6, 7, 8].map((level) => ({
-            level, format: LevelFormat.BULLET, text: ['●', '○', '■'][level % 3], alignment: AlignmentType.LEFT,
+            level, format: LevelFormat.BULLET, text: v.glyph, alignment: AlignmentType.LEFT,
             style: { paragraph: { indent: { left: 720 * (level + 1), hanging: 360 } } },
           })),
-        },
-        {
-          reference: 'ordered',
+        })),
+        ...Object.keys(NUMBER_STYLES).map((k) => ({
+          reference: `ordered-${k}`,
           levels: [0, 1, 2, 3, 4, 5, 6, 7, 8].map((level) => ({
-            level, format: [LevelFormat.DECIMAL, LevelFormat.LOWER_LETTER, LevelFormat.LOWER_ROMAN][level % 3], text: `%${level + 1}.`,
+            level, format: NUM_FORMAT[k], text: `%${level + 1}.`,
             alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720 * (level + 1), hanging: 360 } } },
           })),
-        },
+        })),
       ],
     },
     sections: [
@@ -133,9 +159,15 @@ export async function exportDocx(json, page, defaults) {
           page: {
             // docx tự đảo chiều rộng/cao khi chọn LANDSCAPE, nên luôn truyền kích thước khổ đứng
             size: { width: cmToTwip(size.w), height: cmToTwip(size.h), orientation: landscape ? PageOrientation.LANDSCAPE : PageOrientation.PORTRAIT },
-            margin: { top: cmToTwip(page.margins.top), bottom: cmToTwip(page.margins.bottom), left: cmToTwip(page.margins.left), right: cmToTwip(page.margins.right) },
+            margin: {
+              top: cmToTwip(page.margins.top), bottom: cmToTwip(page.margins.bottom), left: cmToTwip(page.margins.left), right: cmToTwip(page.margins.right),
+              header: cmToTwip(1.25), footer: cmToTwip(1.25),
+            },
           },
+          titlePage: !!page.titlePage,
         },
+        headers,
+        footers,
         children,
       },
     ],
@@ -191,7 +223,16 @@ async function imageRun(attrs, page) {
       h = (h * maxPx) / w
       w = maxPx
     }
-    return new ImageRun({ type: kind, data: buf, transformation: { width: Math.round(w), height: Math.round(h) } })
+    const opts = { type: kind, data: buf, transformation: { width: Math.round(w), height: Math.round(h) } }
+    if (attrs.wrap === 'left' || attrs.wrap === 'right') {
+      opts.floating = {
+        horizontalPosition: { relative: HorizontalPositionRelativeFrom.COLUMN, align: attrs.wrap === 'left' ? HorizontalPositionAlign.LEFT : HorizontalPositionAlign.RIGHT },
+        verticalPosition: { relative: VerticalPositionRelativeFrom.PARAGRAPH, offset: 0 },
+        wrap: { type: TextWrappingType.SQUARE, side: TextWrappingSide.BOTH_SIDES },
+        margins: { left: 114300, right: 114300, top: 36000, bottom: 36000 },
+      }
+    }
+    return new ImageRun(opts)
   } catch (e) {
     console.warn('Không xuất được ảnh', e)
     return null

@@ -2,13 +2,13 @@
 
 // ---------- Trải phẳng tài liệu ----------
 export function analyze(json) {
-  const blocks = [] // mỗi đoạn: { text, chars:[{c, marks}], attrs, list, inTable }
+  const blocks = [] // mỗi đoạn: { text, chars:[{c, marks}], attrs, list, listDepth, listStyle, inTable }
   const tables = []
-  let images = 0
+  const imageList = []
 
   function walk(node, ctx) {
     if (!node) return
-    if (node.type === 'image') images++
+    if (node.type === 'image') imageList.push(node.attrs || {})
     if (node.type === 'paragraph' || node.type === 'heading') {
       const chars = []
       for (const child of node.content || []) {
@@ -16,13 +16,15 @@ export function analyze(json) {
           const marks = markMap(child.marks)
           for (const c of child.text) chars.push({ c, marks })
         } else if (child.type === 'image') {
-          images++
+          imageList.push(child.attrs || {})
           chars.push({ c: '￼', marks: {} })
+        } else if (child.type === 'pageNumber') {
+          chars.push({ c: '\uE000', marks: {}, pageNumber: child.attrs?.kind || 'current' })
         } else if (child.type === 'hardBreak') {
           chars.push({ c: '\n', marks: {} })
         }
       }
-      blocks.push({ type: node.type, text: chars.map((x) => x.c).join(''), chars, attrs: node.attrs || {}, list: ctx.list, inTable: ctx.inTable })
+      blocks.push({ type: node.type, text: chars.map((x) => x.c).join(''), chars, attrs: node.attrs || {}, list: ctx.list, listDepth: ctx.listDepth || 0, listStyle: ctx.listStyle, inTable: ctx.inTable })
       return
     }
     if (node.type === 'table') {
@@ -47,14 +49,17 @@ export function analyze(json) {
       for (const row of rows) for (const cell of row.content || []) walk(cell, { ...ctx, inTable: true })
       return
     }
-    let list = ctx.list
-    if (node.type === 'bulletList') list = 'bullet'
-    if (node.type === 'orderedList') list = 'ordered'
-    for (const child of node.content || []) walk(child, { ...ctx, list })
+    const next = { ...ctx }
+    if (node.type === 'bulletList' || node.type === 'orderedList') {
+      next.list = node.type === 'bulletList' ? 'bullet' : 'ordered'
+      next.listDepth = (ctx.listDepth || 0) + 1
+      next.listStyle = node.attrs?.listStyle || (next.list === 'bullet' ? ['disc', 'circle', 'square'][(next.listDepth - 1) % 3] : 'decimal')
+    }
+    for (const child of node.content || []) walk(child, next)
   }
   walk(json, { list: null, inTable: false })
   const fullText = blocks.map((b) => b.text).join('\n')
-  return { blocks, tables, images, fullText }
+  return { blocks, tables, images: imageList.length, imageList, fullText }
 }
 
 function plainText(node) {
@@ -119,7 +124,7 @@ function toRgb(css) {
 }
 
 // ---------- Tiện ích tìm chữ ----------
-const norm = (s) => s.normalize('NFC')
+const norm = (s) => s.normalize('NFC').replace(/\uE000/g, '')
 
 function locate(info, text) {
   // trả về {block, start} của lần xuất hiện đầu tiên
@@ -147,7 +152,7 @@ function cmpNum(a, b, tol = 0.01) {
 
 // ---------- Chấm một yêu cầu ----------
 // Trả về { ok, hint } — hint là gợi ý khi chưa đạt.
-export function checkStep(check, info, page) {
+export function checkStep(check, info, page, extra) {
   const c = check
   switch (c.type) {
     case 'contains': {
@@ -211,6 +216,9 @@ export function checkStep(check, info, page) {
         const loc = locate(info, t)
         if (!loc) return { ok: false, hint: `Không tìm thấy “${t}”.` }
         if (loc.block.list !== c.kind) return { ok: false, hint: `“${short(t)}” chưa nằm trong danh sách ${c.kind === 'bullet' ? 'dấu đầu dòng' : 'đánh số'}.` }
+        if (c.level && loc.block.listDepth !== c.level) return { ok: false, hint: `“${short(t)}” cần ở mức ${c.level} (đang ở mức ${loc.block.listDepth}). Dùng Tab / Shift+Tab hoặc nút thụt lề.` }
+        if (c.style && loc.block.listStyle !== c.style) return { ok: false, hint: `“${short(t)}” chưa đúng kiểu ${c.styleName || c.style}.` }
+        if (c.notStyle && loc.block.listStyle === c.notStyle) return { ok: false, hint: `Hãy đổi kiểu cho danh sách có “${short(t)}”.` }
       }
       return { ok: true, hint: '' }
     }
@@ -229,8 +237,40 @@ export function checkStep(check, info, page) {
       return { ok: !problems.length, hint: problems.join('; ') }
     }
     case 'image': {
-      const ok = info.images >= (c.min || 1)
-      return { ok, hint: ok ? '' : 'Chưa chèn hình ảnh.' }
+      if (info.images < (c.min || 1)) return { ok: false, hint: 'Chưa chèn hình ảnh.' }
+      if (c.wrap) {
+        const ok = info.imageList.some((a) => (c.wrap === 'any' ? a.wrap && a.wrap !== 'inline' : a.wrap === c.wrap))
+        return { ok, hint: ok ? '' : 'Chọn ảnh → tab Ảnh → “Chữ bao quanh”.' }
+      }
+      if (c.maxWidth) {
+        const ok = info.imageList.some((a) => a.width && a.width <= c.maxWidth)
+        return { ok, hint: ok ? '' : 'Ảnh còn to quá, hãy thu nhỏ lại.' }
+      }
+      return { ok: true, hint: '' }
+    }
+    case 'header':
+    case 'footer': {
+      const name = c.type === 'header' ? 'Đầu trang' : 'Chân trang'
+      const hf = extra?.[c.type]
+      if (!hf) return { ok: false, hint: `${name} đang trống.` }
+      const sub = analyze(hf)
+      if (c.text && !norm(sub.fullText).includes(norm(c.text))) return { ok: false, hint: `${name} chưa có “${c.text}”.` }
+      const pn = sub.blocks.find((b) => b.chars.some((x) => x.pageNumber === 'current'))
+      if (c.pageNumber && !pn) return { ok: false, hint: `${name} chưa có số trang (Chèn → Số trang).` }
+      if (c.align) {
+        const b = c.pageNumber ? pn : c.text ? sub.blocks.find((b) => norm(b.text).includes(norm(c.text))) : sub.blocks[0]
+        const name2 = { left: 'bên trái', center: 'ở giữa', right: 'bên phải' }[c.align]
+        if ((b?.attrs.textAlign || 'left') !== c.align) return { ok: false, hint: `${c.pageNumber ? 'Số trang' : `“${c.text}”`} trong ${name.toLowerCase()} cần ${name2}.` }
+      }
+      if (c.format) {
+        const r = checkStep({ type: 'format', text: c.text, ...c.format }, sub, page)
+        if (!r.ok) return { ok: false, hint: `${name}: ${r.hint}` }
+      }
+      return { ok: true, hint: '' }
+    }
+    case 'titlePage': {
+      const ok = !!page.titlePage === c.value
+      return { ok, hint: ok ? '' : 'Bật “Trang đầu khác” trong tab Đầu trang & Chân trang.' }
     }
     case 'page': {
       const problems = []
@@ -250,7 +290,7 @@ function short(s) {
   return s.length > 30 ? s.slice(0, 28) + '…' : s
 }
 
-export function checkExercise(ex, json, page) {
+export function checkExercise(ex, json, page, extra = {}) {
   const info = analyze(json)
-  return ex.steps.map((s) => checkStep(s.check, info, page))
+  return ex.steps.map((s) => checkStep(s.check, info, page, extra))
 }

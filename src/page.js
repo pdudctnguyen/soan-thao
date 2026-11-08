@@ -27,5 +27,6 @@ export function applyPage(el, page) {
     document.head.appendChild(tag)
   }
   const m = page.margins
-  tag.textContent = `@page { size: ${w}cm ${h}cm; margin: ${m.top}cm ${m.right}cm ${m.bottom}cm ${m.left}cm; }`
+  void m
+  tag.textContent = `@page { size: ${w}cm ${h}cm; margin: 0; }`
 }

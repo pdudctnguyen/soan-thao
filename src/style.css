@@ -74,21 +74,46 @@ button, select, input { font: inherit; color: inherit; }
 .workspace { flex: 1; display: flex; min-height: 0; }
 .scroller { flex: 1; overflow: auto; padding: 24px 16px 60px; }
 .page-wrap { width: max-content; margin: 0 auto; }
+.page-wrap { position: relative; --gap: 24px; --hf: 1.25cm; }
+.sheets { position: absolute; inset: 0 0 auto 0; }
+.sheet { position: relative; width: var(--page-w); height: var(--page-h); margin-bottom: var(--gap); background: #fff; box-shadow: 0 0 0 1px #d0d0d0, 0 2px 8px rgba(0,0,0,.12); }
 .page {
-  --page-break: #9aa3ad;
+  position: relative;
+  z-index: 1;
   width: var(--page-w);
   min-height: var(--page-h);
   padding: var(--m-top) var(--m-right) var(--m-bottom) var(--m-left);
-  background: #fff;
-  box-shadow: 0 0 0 1px #d0d0d0, 0 2px 8px rgba(0,0,0,.12);
-  /* vạch ngắt trang giả lập theo chiều cao khổ giấy */
-  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--page-h) - 1px), var(--page-break) calc(var(--page-h) - 1px), var(--page-break) var(--page-h));
   font-family: 'Times New Roman', serif;
   font-size: 14pt;
   line-height: 1.15;
   color: #000;
   cursor: text;
 }
+.page-spacer { pointer-events: none; user-select: none; }
+/* đầu trang / chân trang */
+.hf, .hf-clone { position: absolute; left: var(--m-left); right: var(--m-right); font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.15; color: #000; }
+.hf { z-index: 2; min-height: 1.2em; cursor: text; }
+.hf-header, .hf-clone-h { top: var(--hf); }
+.hf-footer { top: calc(var(--page-h) - var(--hf)); transform: translateY(-100%); }
+.hf-clone-f { bottom: var(--hf); }
+.hf .tiptap { min-height: 1.2em; }
+.hf-label { display: none; position: absolute; left: -2px; font: 11px 'Segoe UI', system-ui, sans-serif; background: #e6eefa; color: var(--accent); border: 1px dashed var(--accent); padding: 0 6px; border-radius: 3px; white-space: nowrap; }
+.hf-header .hf-label { top: calc(100% + 4px); }
+.hf-footer .hf-label { bottom: calc(100% + 4px); }
+.page-wrap:not(.hf-editing) .hf, .page-wrap:not(.hf-editing) .hf-clone { opacity: .55; }
+.page-wrap.hf-editing .page { opacity: .45; }
+.page-wrap.hf-editing .hf { outline: 1px dashed var(--accent); outline-offset: 4px; }
+.page-wrap.hf-editing .hf-label { display: block; }
+.page-wrap.title-page:not(.hf-editing) .hf { visibility: hidden; }
+.page-num::after { content: '1'; }
+.page-num[data-page-number="total"]::after { content: var(--pages-str, "1"); }
+.hf-clone .page-num[data-page-number="current"]::after { content: attr(data-n); }
+.hf .page-num { background: #e8e8e8; border-radius: 2px; }
+.hf-clone { pointer-events: auto; cursor: default; }
+.tiptap [data-resize-container][data-node="image"] { display: inline-flex !important; vertical-align: bottom; }
+.tiptap [data-resize-container][data-wrap="left"] { float: left; margin: 0.1cm 0.35cm 0.1cm 0; }
+.tiptap [data-resize-container][data-wrap="right"] { float: right; margin: 0.1cm 0 0.1cm 0.35cm; }
+.tiptap p::after { content: ''; }
 .tiptap { outline: none; min-height: 1em; }
 .tiptap p { margin: 0; }
 .tiptap h1 { font-size: 20pt; color: #1f3864; margin: 12pt 0 4pt; font-weight: 700; }
@@ -205,12 +230,19 @@ dialog select { padding: 3px 5px; border: 1px solid #c8c8c8; border-radius: 3px;
 .toast { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); background: #323232; color: #fff; padding: 9px 16px; border-radius: 6px; z-index: 60; font-size: 13px; max-width: 80vw; }
 
 /* ---------- In ---------- */
+@page { margin: 0; }
 @media print {
   body { background: #fff; overflow: visible; display: block; }
   .topbar, .tabs, .ribbon, .lessons, .statusbar, .findbar, .toast, .pop { display: none !important; }
   .workspace, .scroller { display: block; overflow: visible; padding: 0; }
   .page-wrap { zoom: 1 !important; }
-  .page { box-shadow: none; background-image: none; padding: 0; width: auto; min-height: 0; }
+  .page-wrap { --gap: 0px; }
+  .sheet { box-shadow: none; break-after: page; }
+  .page-wrap .hf, .page-wrap .hf-clone, .page-wrap .page { opacity: 1 !important; outline: none !important; }
+  .hf-label, .page-spacer { visibility: hidden; }
+  .tiptap [data-resize-handle] { display: none !important; }
+  .tiptap .ProseMirror-selectednode, .tiptap .selectedCell::after { outline: none !important; background: none !important; }
+  .hf .page-num { background: none; }
 }
 .ribbon button.undo { font-size: 20px; }
 .ribbon .split .caret { height: 28px; }
@@ -231,3 +263,19 @@ dialog select { padding: 3px 5px; border: 1px solid #c8c8c8; border-radius: 3px;
 .student-chip button { background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; text-decoration: underline; font-size: 12.5px; }
 .lesson-actions .submit-btn { background: #1e7b34; border-color: #1e7b34; }
 .lesson-actions { flex-wrap: wrap; }
+
+.ribbon label.chk { display: flex; align-items: flex-start; gap: 6px; font-size: 13px; line-height: 1.3; padding: 4px 6px; }
+.ribbon label.chk small { color: var(--muted); }
+.ribbon .close-hf { color: var(--bad); }
+.list-styles { display: grid; grid-template-columns: repeat(4, 54px); gap: 4px; }
+.list-styles button { height: 54px; background: #fff; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; }
+.list-styles button:hover { border-color: var(--accent); background: var(--accent-soft); }
+.ls-glyph { font-size: 16px; }
+.ls-lines { width: 20px; height: 14px; background: repeating-linear-gradient(#999 0 2px, transparent 2px 6px); }
+.ls-sample { font: 11px/1.25 'Times New Roman', serif; text-align: left; }
+.pop-title { font-size: 11px; color: var(--muted); text-transform: uppercase; padding: 6px 10px 2px; }
+
+.tiptap .page-break { height: 0; border-top: 1px dashed #9aa3ad; margin: 4px 0; position: relative; }
+.tiptap .page-break::after { content: 'Ngắt trang'; position: absolute; left: 50%; top: -8px; transform: translateX(-50%); background: #fff; color: #9aa3ad; font: 10px 'Segoe UI', system-ui, sans-serif; padding: 0 6px; }
+.tiptap .page-break.ProseMirror-selectednode { border-top-color: var(--accent); }
+@media print { .tiptap .page-break { border: 0; } .tiptap .page-break::after { display: none; } }

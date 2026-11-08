@@ -3,10 +3,10 @@ import StarterKit from '@tiptap/starter-kit'
 import { TextStyle, Color, FontFamily, FontSize } from '@tiptap/extension-text-style'
 import TextAlign from '@tiptap/extension-text-align'
 import Highlight from '@tiptap/extension-highlight'
-import Image from '@tiptap/extension-image'
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table'
 import Subscript from './subsup.js'
-import { ParagraphFormat } from './extensions.js'
+import { ParagraphFormat, ListStyle, WrapImage, PageNumber, PageBreak, BULLET_STYLES, NUMBER_STYLES } from './extensions.js'
+import { Pagination, repaginate, geometry, PAGE_GAP } from './pagination.js'
 import { findNext, replaceAll, replaceCurrent, findAll } from './find-replace.js'
 import { PAGE_SIZES, DEFAULT_PAGE, applyPage } from './page.js'
 import { LESSONS } from './lessons.js'
@@ -40,25 +40,41 @@ const storage = {
 const docKey = () => (currentLesson ? `stt:ex:${currentLesson.id}` : 'stt:free')
 
 // ---------------- Trình soạn thảo ----------------
-const editor = new Editor({
+const commonExtensions = () => [
+  StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: false }),
+  TextStyle, Color, FontFamily, FontSize,
+  Highlight.configure({ multicolor: true }),
+  TextAlign.configure({ types: ['heading', 'paragraph'] }),
+  WrapImage.configure({ inline: true, allowBase64: true, resize: { enabled: true, alwaysPreserveAspectRatio: true, minWidth: 30, minHeight: 30 } }),
+  ...Subscript,
+  ParagraphFormat,
+  ListStyle,
+]
+const body = new Editor({
   element: $('#editor'),
-  extensions: [
-    StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: false }),
-    TextStyle, Color, FontFamily, FontSize,
-    Highlight.configure({ multicolor: true }),
-    TextAlign.configure({ types: ['heading', 'paragraph'] }),
-    Image.configure({ inline: true, allowBase64: true, resize: { enabled: true, alwaysPreserveAspectRatio: true, minWidth: 30, minHeight: 30 } }),
-    Table.configure({ resizable: true }), TableRow, TableHeader, TableCell,
-    ...Subscript,
-    ParagraphFormat,
-  ],
+  extensions: [...commonExtensions(), Table.configure({ resizable: true }), TableRow, TableHeader, TableCell, Pagination, PageBreak],
   content: '<p></p>',
-  autofocus: true,
   onUpdate: () => { scheduleSave(); updateStatus() },
   onSelectionUpdate: () => syncToolbar(),
   onTransaction: () => syncToolbar(),
+  onFocus: () => setActive(body),
 })
-window.editor = editor // tiện kiểm tra trong DevTools
+// Đầu trang / chân trang: hai trình soạn thảo nhỏ, dùng chung thanh công cụ
+const makeHF = (el) =>
+  new Editor({
+    element: el,
+    extensions: [...commonExtensions(), PageNumber],
+    content: '',
+    onUpdate: () => { scheduleSave(); scheduleLayout() },
+    onSelectionUpdate: () => syncToolbar(),
+    onTransaction: () => syncToolbar(),
+    onFocus: ({ editor: e }) => setActive(e),
+  })
+const header = makeHF($('#headerEditor'))
+const footer = makeHF($('#footerEditor'))
+let editor = body // trình soạn thảo đang gõ: thân văn bản, đầu trang hoặc chân trang
+window.editor = body // tiện kiểm tra trong DevTools
+window.hf = { header, footer }
 
 // ---------------- Lưu tạm tự động ----------------
 let saveTimer
@@ -68,24 +84,30 @@ function scheduleSave() {
   saveTimer = setTimeout(saveNow, 600)
 }
 function saveNow() {
-  storage.set(docKey(), { doc: editor.getJSON(), page, name: $('#fileName').value })
+  storage.set(docKey(), { doc: body.getJSON(), header: header.getJSON(), footer: footer.getJSON(), page, name: $('#fileName').value })
   $('#saveState').textContent = 'Đã lưu tạm'
 }
 function loadDoc(key, fallbackHtml, fallbackName) {
   const saved = storage.get(key)
   if (saved?.doc) {
-    editor.commands.setContent(saved.doc, { emitUpdate: false })
+    body.commands.setContent(saved.doc, { emitUpdate: false })
+    header.commands.setContent(saved.header || '', { emitUpdate: false })
+    footer.commands.setContent(saved.footer || '', { emitUpdate: false })
     page = saved.page || structuredClone(DEFAULT_PAGE)
     $('#fileName').value = saved.name || fallbackName
   } else {
-    editor.commands.setContent(fallbackHtml || '<p></p>', { emitUpdate: false })
-    page = structuredClone(DEFAULT_PAGE)
+    body.commands.setContent(fallbackHtml || '<p></p>', { emitUpdate: false })
+    header.commands.setContent(lessonHF?.header || '', { emitUpdate: false })
+    footer.commands.setContent(lessonHF?.footer || '', { emitUpdate: false })
+    page = { ...structuredClone(DEFAULT_PAGE), ...(lessonHF?.page || {}) }
     $('#fileName').value = fallbackName
   }
-  editor.commands.focus('end')
+  setActive(body)
+  body.commands.focus('end')
   applyPage($('#page'), page)
   updateStatus()
 }
+let lessonHF = null // đầu/chân trang có sẵn của đề bài (nếu có)
 $('#fileName').addEventListener('input', scheduleSave)
 
 // ---------------- Tab ribbon ----------------
@@ -240,12 +262,18 @@ const ACTIONS = {
   indent: () => (editor.can().sinkListItem('listItem') ? editor.chain().focus().sinkListItem('listItem').run() : editor.chain().focus().changeIndent(1.27).run()),
   outdent: () => (editor.isActive('listItem') ? editor.chain().focus().liftListItem('listItem').run() : editor.chain().focus().changeIndent(-1.27).run()),
   paraDialog: openParaDialog,
-  find: () => openFind(false),
-  replace: () => openFind(true),
+  find: () => { setActive(body); openFind(false) },
+  replace: () => { setActive(body); openFind(true) },
   image: () => $('#imageInput').click(),
   hr: () => editor.chain().focus().setHorizontalRule().run(),
+  pageBreak: () => { setActive(body); body.chain().focus().setPageBreak().run() },
   marginDialog: openMarginDialog,
   submit: () => doSubmit(),
+  editHeader: () => editHF('header'),
+  editFooter: () => editHF('footer'),
+  closeHF: () => closeHF(),
+  gotoHeader: () => editHF('header'),
+  gotoFooter: () => editHF('footer'),
   student: () => askStudent(),
   submitSetup: openSetup,
 }
@@ -339,6 +367,7 @@ function setPage(patch) {
   applyPage($('#page'), page)
   scheduleSave()
   updateStatus()
+  syncToolbar()
 }
 $('#marginPop').addEventListener('click', (e) => {
   const b = e.target.closest('[data-margin]')
@@ -369,7 +398,7 @@ function openFind(withReplace) {
   const bar = $('#findbar')
   bar.classList.remove('hidden')
   $('#replaceRow').classList.toggle('hidden', !withReplace)
-  const sel = editor.state.doc.textBetween(editor.state.selection.from, editor.state.selection.to)
+  const sel = body.state.doc.textBetween(body.state.selection.from, body.state.selection.to)
   if (sel && sel.length < 60) $('#findText').value = sel
   $('#findText').focus()
   $('#findText').select()
@@ -377,7 +406,7 @@ function openFind(withReplace) {
 }
 function updateFindCount(idx) {
   const q = $('#findText').value
-  const n = findAll(editor.state.doc, q, $('#matchCase').checked).length
+  const n = findAll(body.state.doc, q, $('#matchCase').checked).length
   $('#findCount').textContent = !q ? '' : n === 0 ? 'Không thấy' : idx != null && idx >= 0 ? `${idx + 1}/${n}` : `${n} kết quả`
 }
 $('#findText').addEventListener('input', () => updateFindCount())
@@ -386,26 +415,27 @@ $('#findText').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); doFindNext() }
 })
 function doFindNext() {
-  const r = findNext(editor, $('#findText').value, $('#matchCase').checked)
+  const r = findNext(body, $('#findText').value, $('#matchCase').checked)
   updateFindCount(r.index)
   $('#findText').focus()
 }
 $('#findNext').addEventListener('click', doFindNext)
 $('#replaceOne').addEventListener('click', () => {
-  const r = replaceCurrent(editor, $('#findText').value, $('#replaceText').value, $('#matchCase').checked)
+  const r = replaceCurrent(body, $('#findText').value, $('#replaceText').value, $('#matchCase').checked)
   updateFindCount(r.index)
 })
 $('#replaceAll').addEventListener('click', () => {
-  const n = replaceAll(editor, $('#findText').value, $('#replaceText').value, $('#matchCase').checked)
+  const n = replaceAll(body, $('#findText').value, $('#replaceText').value, $('#matchCase').checked)
   toast(n ? `Đã thay ${n} chỗ.` : 'Không tìm thấy chữ cần thay.')
   updateFindCount()
 })
-function closeFind() { $('#findbar').classList.add('hidden'); editor.commands.focus() }
+function closeFind() { $('#findbar').classList.add('hidden'); body.commands.focus() }
 $('#closeFind').addEventListener('click', closeFind)
 
 // ---------------- Phím tắt kiểu Word ----------------
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !$('#findbar').classList.contains('hidden')) return closeFind()
+  if (e.key === 'Escape' && editor !== body) return closeHF()
   if (!(e.ctrlKey || e.metaKey) || e.altKey) return
   const k = e.key.toLowerCase()
   const map = {
@@ -456,30 +486,165 @@ function syncToolbar() {
   const inTable = editor.isActive('table')
   $('#tableTab').classList.toggle('hidden', !inTable || +$('#level').value < 6)
   if (!inTable && $('#tableTab').classList.contains('active')) showTab('home')
+  const img = selectedImage()
+  $('#imageTab').classList.toggle('hidden', !img || +$('#level').value < 8)
+  if (img) $$('[data-wrap]').forEach((b) => b.classList.toggle('on', (img.attrs.wrap || 'inline') === b.dataset.wrap))
+  if (!img && $('#imageTab').classList.contains('active')) showTab('home')
+  $('#titlePage').checked = !!page.titlePage
 }
 
 // ---------------- Thanh trạng thái, thu phóng ----------------
 function updateStatus() {
-  const text = editor.state.doc.textBetween(0, editor.state.doc.content.size, ' ', ' ')
+  const text = body.state.doc.textBetween(0, body.state.doc.content.size, ' ', ' ')
   const words = text.trim() ? text.trim().split(/\s+/).length : 0
   $('#wordInfo').textContent = `${words} từ`
+  scheduleLayout()
+}
+
+// ---------------- Chia trang, vẽ tờ giấy, đầu/chân trang ----------------
+let pageCount = 1
+let layoutQueued = false
+let printGap = null // khi in: các tờ sát nhau, không có khoảng xám
+function scheduleLayout() {
+  if (layoutQueued) return
+  layoutQueued = true
   requestAnimationFrame(() => {
-    const el = $('#page')
-    const pageH = parseFloat(getComputedStyle(el).getPropertyValue('--page-h-px')) || cmPx(el)
-    const pages = Math.max(1, Math.ceil(el.scrollHeight / pageH - 0.001))
-    el.style.setProperty('--pages', pages)
-    $('#pageInfo').textContent = `${pages} trang`
+    layoutQueued = false
+    layout()
   })
 }
-function cmPx(el) {
-  const probe = document.createElement('div')
-  probe.style.height = 'var(--page-h)'
-  probe.style.position = 'absolute'
-  el.appendChild(probe)
-  const h = probe.offsetHeight
-  probe.remove()
-  return h
+function layout() {
+  const gap = printGap ?? PAGE_GAP
+  const g = geometry(page)
+  const wrap = $('#pageWrap')
+  wrap.style.setProperty('--gap', `${gap}px`)
+  pageCount = repaginate(body, page, gap)
+  const stride = g.H + gap
+  $('#page').style.minHeight = `${pageCount * stride - gap}px`
+  wrap.style.setProperty('--pages-str', `"${pageCount}"`)
+  wrap.classList.toggle('title-page', !!page.titlePage)
+  // vẽ đủ số tờ giấy, mỗi tờ có bản sao đầu trang / chân trang
+  const sheets = $('#sheets')
+  while (sheets.children.length < pageCount) {
+    const sh = document.createElement('div')
+    sh.className = 'sheet'
+    sh.innerHTML = '<div class="hf-clone hf-clone-h tiptap"></div><div class="hf-clone hf-clone-f tiptap"></div>'
+    sheets.appendChild(sh)
+  }
+  while (sheets.children.length > pageCount) sheets.lastChild.remove()
+  const hHtml = header.isEmpty ? '' : header.getHTML()
+  const fHtml = footer.isEmpty ? '' : footer.getHTML()
+  ;[...sheets.children].forEach((sh, i) => {
+    const show = i > 0 && !(page.titlePage && i === 0)
+    fillClone($('.hf-clone-h', sh), show ? hHtml : '', i + 1)
+    fillClone($('.hf-clone-f', sh), show ? fHtml : '', i + 1)
+  })
+  $('#pageInfo').textContent = `${pageCount} trang`
 }
+function fillClone(el, html, n) {
+  if (el.dataset.src === html + n + pageCount) return
+  el.dataset.src = html + n + pageCount
+  el.innerHTML = html
+  el.querySelectorAll('[data-page-number="current"]').forEach((s) => (s.dataset.n = n))
+}
+new ResizeObserver(scheduleLayout).observe($('#editor'))
+window.addEventListener('beforeprint', () => { printGap = 0; layout() })
+window.addEventListener('afterprint', () => { printGap = null; layout() })
+
+// ---------------- Chế độ sửa đầu trang / chân trang ----------------
+function setActive(ed) {
+  if (editor === ed) return
+  editor = ed
+  const hfMode = ed !== body
+  $('#pageWrap').classList.toggle('hf-editing', hfMode)
+  $('#hfTab').classList.toggle('hidden', !hfMode)
+  if (hfMode) showTab('hf')
+  else if ($('#hfTab').classList.contains('active')) showTab('home')
+  syncToolbar()
+}
+function editHF(which) {
+  const ed = which === 'footer' ? footer : header
+  setActive(ed)
+  showTab('hf')
+  ed.commands.focus('end')
+}
+function closeHF() {
+  setActive(body)
+  body.commands.focus()
+}
+$('#hfHeader').addEventListener('mousedown', (e) => { if (editor !== header) { e.preventDefault(); editHF('header') } })
+$('#hfFooter').addEventListener('mousedown', (e) => { if (editor !== footer) { e.preventDefault(); editHF('footer') } })
+$('#sheets').addEventListener('dblclick', (e) => {
+  if (e.target.closest('.hf-clone-h')) editHF('header')
+  else if (e.target.closest('.hf-clone-f')) editHF('footer')
+})
+$('#editor').addEventListener('mousedown', () => { if (editor !== body) setActive(body) })
+function insertPageNumber(where, align, kind = 'current') {
+  const ed = where === 'footer' ? footer : header
+  setActive(ed)
+  const nodes = kind === 'of'
+    ? [{ type: 'text', text: 'Trang ' }, { type: 'pageNumber', attrs: { kind: 'current' } }, { type: 'text', text: '/' }, { type: 'pageNumber', attrs: { kind: 'total' } }]
+    : [{ type: 'pageNumber', attrs: { kind: 'current' } }]
+  const para = { type: 'paragraph', attrs: { textAlign: align }, content: nodes }
+  if (ed.isEmpty) ed.commands.setContent({ type: 'doc', content: [para] })
+  else ed.commands.insertContentAt(ed.state.doc.content.size, para)
+  ed.commands.focus('end')
+  closePops()
+}
+$('#pageNumPop').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-pn]')
+  if (!b) return
+  const [where, align, kind] = b.dataset.pn.split(',')
+  insertPageNumber(where, align, kind)
+})
+$('#titlePage').addEventListener('change', (e) => setPage({ titlePage: e.target.checked }))
+
+// ---------------- Kiểu danh sách ----------------
+function setListStyle(kind, style) {
+  const typeName = kind === 'bullet' ? 'bulletList' : 'orderedList'
+  if (!editor.isActive(typeName)) (kind === 'bullet' ? editor.chain().focus().toggleBulletList() : editor.chain().focus().toggleOrderedList()).run()
+  const { state, view } = editor
+  const $f = state.selection.$from
+  for (let d = $f.depth; d > 0; d--) {
+    const n = $f.node(d)
+    if (n.type.name === typeName) {
+      view.dispatch(state.tr.setNodeMarkup($f.before(d), undefined, { ...n.attrs, listStyle: style }))
+      break
+    }
+  }
+  editor.commands.focus()
+  closePops()
+}
+$('#bulletPop').innerHTML = `<div class="list-styles">${Object.entries(BULLET_STYLES).map(([k, v]) => `<button data-ls="bullet,${k}" title="${v.name}"><span class="ls-glyph">${v.glyph}</span><span class="ls-lines"></span></button>`).join('')}</div>`
+$('#numberPop').innerHTML = `<div class="list-styles">${Object.entries(NUMBER_STYLES).map(([k, v]) => `<button data-ls="ordered,${k}" title="${v.name}"><span class="ls-sample">${v.sample.split(' ').join('<br>')}</span></button>`).join('')}</div>`
+for (const id of ['#bulletPop', '#numberPop']) {
+  $(id).addEventListener('click', (e) => {
+    const b = e.target.closest('[data-ls]')
+    if (b) setListStyle(...b.dataset.ls.split(','))
+  })
+}
+
+// ---------------- Ảnh: bố trí và kích thước ----------------
+// Đổi thuộc tính ảnh rồi chọn lại ảnh (đổi thuộc tính làm mất vùng chọn → tab Ảnh sẽ biến mất)
+function updateImage(attrs) {
+  const pos = editor.state.selection.from
+  editor.chain().focus().updateAttributes('image', attrs).setNodeSelection(pos).run()
+}
+function selectedImage() {
+  const sel = editor.state.selection
+  return sel.node?.type.name === 'image' ? sel.node : null
+}
+$$('[data-wrap]').forEach((b) => b.addEventListener('click', () => {
+  if (selectedImage()) updateImage({ wrap: b.dataset.wrap })
+}))
+$$('[data-imgsize]').forEach((b) => b.addEventListener('click', () => {
+  const img = selectedImage()
+  if (!img) return
+  const g = geometry(page)
+  const w = Math.round((g.W - g.left - g.right) * parseFloat(b.dataset.imgsize))
+  const ratio = img.attrs.width && img.attrs.height ? img.attrs.height / img.attrs.width : 0.75
+  updateImage({ width: w, height: Math.round(w * ratio) })
+}))
 $('#zoom').addEventListener('input', (e) => {
   $('#pageWrap').style.zoom = e.target.value / 100
   $('#zoomVal').textContent = `${e.target.value}%`
@@ -489,7 +654,7 @@ $('#zoom').addEventListener('input', (e) => {
 async function saveDocx() {
   toast('Đang tạo tệp .docx…')
   const { exportDocx } = await import('./export-docx.js')
-  const blob = await exportDocx(editor.getJSON(), page, DEFAULTS)
+  const blob = await exportDocx(body.getJSON(), page, DEFAULTS, hfJSON())
   const name = ($('#fileName').value.trim() || 'van-ban').replace(/[\\/:*?"<>|]/g, '')
   const a = document.createElement('a')
   a.href = URL.createObjectURL(blob)
@@ -506,7 +671,9 @@ $('#openInput').addEventListener('change', async (e) => {
     const mammoth = (await import('mammoth/mammoth.browser.js')).default
     const { value } = await mammoth.convertToHtml({ arrayBuffer: await f.arrayBuffer() })
     if (currentLesson) closeLesson()
-    editor.commands.setContent(value || '<p></p>')
+    body.commands.setContent(value || '<p></p>')
+    header.commands.clearContent()
+    footer.commands.clearContent()
     $('#fileName').value = f.name.replace(/\.docx$/i, '')
     toast('Đã mở tệp. Lưu ý: một số định dạng (màu, cỡ chữ, lề) có thể không giữ được.')
   } catch (err) {
@@ -554,7 +721,9 @@ function openLesson(l) {
   saveNow()
   currentLesson = l
   if (+$('#level').value !== 9 && +$('#level').value < l.lop) setLevel(l.lop)
+  lessonHF = { header: l.startHeader, footer: l.startFooter, page: l.startPage }
   loadDoc(docKey(), l.start, l.title)
+  lessonHF = null
   $('#lessonList').classList.add('hidden')
   const v = $('#lessonView')
   v.classList.remove('hidden')
@@ -580,7 +749,9 @@ function openLesson(l) {
   $('#resetLesson').onclick = async () => {
     if (!(await confirmBox('Làm lại', 'Xoá bài đang làm và bắt đầu lại?'))) return
     storage.del(docKey())
+    lessonHF = { header: l.startHeader, footer: l.startFooter, page: l.startPage }
     loadDoc(docKey(), l.start, l.title)
+    lessonHF = null
     $$('.steps li').forEach((li) => li.classList.remove('ok', 'bad'))
     $('#score').textContent = ''
   }
@@ -588,7 +759,7 @@ function openLesson(l) {
 }
 function runCheck() {
   const l = currentLesson
-  const res = checkExercise(l, editor.getJSON(), page)
+  const res = checkExercise(l, body.getJSON(), page, hfJSON())
   res.forEach((r, i) => {
     const li = $(`.steps li[data-i="${i}"]`)
     li.classList.toggle('ok', r.ok)
@@ -667,7 +838,7 @@ async function doSubmit() {
     saveNow()
     const results = currentLesson ? runCheck() : null
     const { exportDocx } = await import('./export-docx.js')
-    const docxBlob = await exportDocx(editor.getJSON(), page, DEFAULTS)
+    const docxBlob = await exportDocx(body.getJSON(), page, DEFAULTS, hfJSON())
     const r = await submit(submitCfg, st, { lesson: currentLesson, results, docxBlob, fileName: $('#fileName').value.trim() || 'van-ban' })
     if (r.ok) toast(r.confirmed ? 'Nộp bài thành công!' : 'Đã gửi bài. Nếu thầy cô chưa nhận được, em nộp lại nhé.')
     else toast(`Chưa nộp được: ${r.error}`)
@@ -726,6 +897,10 @@ function openSetup() {
     $$('.submit-row').forEach((el) => el.classList.toggle('hidden', !submitCfg))
     toast(url ? 'Đã lưu cài đặt nộp bài.' : 'Đã tắt nộp bài.')
   }
+}
+
+function hfJSON() {
+  return { header: header.isEmpty ? null : header.getJSON(), footer: footer.isEmpty ? null : footer.getJSON() }
 }
 
 // ---------------- Thông báo ----------------
