@@ -40,7 +40,7 @@ function blobToBase64(blob) {
 }
 
 // payload: { lesson, results, docxBlob, fileName }
-export async function submit(cfg, student, { lesson, results, docxBlob, fileName }) {
+export async function submit(cfg, student, { lesson, results, docxBlob, fileName, ext = 'docx' }) {
   const dat = results ? results.filter((r) => r.ok).length : null
   const body = {
     maNop: crypto.randomUUID?.() || String(Date.now()) + Math.random(), // chống ghi trùng khi gửi lại
@@ -53,6 +53,7 @@ export async function submit(cfg, student, { lesson, results, docxBlob, fileName
     tong: results ? results.length : null,
     chiTiet: results ? lesson.steps.map((s, i) => `${results[i].ok ? '✓' : '✗'} ${s.text}`).join('\n') : '',
     tenTep: fileName,
+    duoiTep: ext,
     tep: docxBlob ? await blobToBase64(docxBlob) : '',
   }
   // text/plain để trình duyệt không gửi yêu cầu kiểm tra CORS trước (Apps Script không trả lời được)

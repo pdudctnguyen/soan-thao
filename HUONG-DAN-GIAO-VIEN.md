@@ -1,6 +1,9 @@
 # Cài đặt nộp bài (làm một lần, khoảng 5 phút)
 
-Bài học sinh nộp sẽ vào **Google Sheet của thầy cô**: mỗi lần nộp thêm một dòng điểm, file .docx được lưu vào Google Drive.
+> Dùng chung cho cả **Soạn thảo** và **Bảng tính**: cùng một Google Sheet, cùng một đường link nộp bài.
+> **Đã cài từ trước khi có Bảng tính?** Dán lại `apps-script/Code.gs` mới rồi làm mục *Khi sửa mã Apps Script* ở cuối trang — bản cũ sẽ lưu tệp bảng tính sai đuôi.
+
+Bài học sinh nộp sẽ vào **Google Sheet của thầy cô**: mỗi lần nộp thêm một dòng điểm, file bài làm (.docx hoặc .xlsx) được lưu vào Google Drive.
 
 ## Bước 1. Tạo Google Sheet
 1. Vào [sheets.new](https://sheets.new) và đặt tên, ví dụ “Bài nộp Tin học 6”.
@@ -33,12 +36,12 @@ Bài học sinh nộp sẽ vào **Google Sheet của thầy cô**: mỗi lần n
 3. Bấm **Kiểm tra kết nối**, phải thấy ✓.
 4. Bấm **Sao chép** đường link ở dưới và gửi cho học sinh (qua Zalo, Classroom hoặc ghi lên bảng bằng mã QR).
 
-Học sinh mở link đó một lần là máy nhớ địa chỉ nộp bài. Lần đầu nộp, máy hỏi họ tên và lớp.
+Học sinh mở link đó một lần là máy nhớ địa chỉ nộp bài cho **cả hai phần mềm** (chuyển qua lại bằng nút **↗ Bảng tính** / **↗ Soạn thảo** ở góc trên). Lần đầu nộp, máy hỏi họ tên và lớp.
 
 ## Xem kết quả
 - **Kết quả**: mọi lần nộp, gồm thời gian, lớp, họ tên, bài, số yêu cầu đạt, chi tiết từng ý và link file bài làm.
 - **Bảng điểm**: mỗi học sinh một dòng, mỗi bài một cột, lấy **điểm cao nhất** (%) nếu em nộp nhiều lần.
-- File .docx nằm trong Drive, thư mục **Bài nộp Soạn thảo / <Lớp>**.
+- File bài làm (.docx, .xlsx) nằm trong Drive, thư mục **Bài nộp Soạn thảo / <Lớp>**. Bài bảng tính có chữ “Bảng tính” trong tên bài.
 
 ## Khi sửa mã Apps Script
 Sau khi sửa phải vào **Triển khai → Quản lý các lần triển khai → ✏ → Phiên bản: Phiên bản mới → Triển khai**. Làm theo cách này thì URL giữ nguyên, không phải gửi lại link cho học sinh.

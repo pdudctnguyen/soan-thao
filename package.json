@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "dev:bang-tinh": "vite -c bang-tinh/vite.config.js",
+    "build": "vite build && vite build -c bang-tinh/vite.config.js",
     "preview": "vite preview"
   },
   "devDependencies": {
@@ -24,7 +25,10 @@
     "@tiptap/extensions": "^3.10.7",
     "@tiptap/pm": "^3.10.7",
     "@tiptap/starter-kit": "^3.10.7",
+    "chart.js": "^4.6.1",
     "docx": "^9.5.1",
+    "exceljs": "^4.4.0",
+    "fast-formula-parser": "^1.0.19",
     "mammoth": "^1.11.0"
   }
 }

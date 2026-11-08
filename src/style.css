@@ -279,3 +279,7 @@ dialog select { padding: 3px 5px; border: 1px solid #c8c8c8; border-radius: 3px;
 .tiptap .page-break::after { content: 'Ngắt trang'; position: absolute; left: 50%; top: -8px; transform: translateX(-50%); background: #fff; color: #9aa3ad; font: 10px 'Segoe UI', system-ui, sans-serif; padding: 0 6px; }
 .tiptap .page-break.ProseMirror-selectednode { border-top-color: var(--accent); }
 @media print { .tiptap .page-break { border: 0; } .tiptap .page-break::after { display: none; } }
+
+/* nút chuyển giữa Soạn thảo và Bảng tính */
+.app-switch { color: #fff; opacity: .85; font-size: 13px; text-decoration: none; border: 1px solid rgba(255,255,255,.4); border-radius: 4px; padding: 3px 8px; }
+.app-switch:hover { opacity: 1; background: rgba(255,255,255,.1); }

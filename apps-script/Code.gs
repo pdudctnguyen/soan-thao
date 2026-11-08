@@ -4,7 +4,7 @@
  *
  * Mỗi lần học sinh bấm "Nộp bài":
  *   - thêm một dòng vào trang tính "Kết quả"
- *   - lưu tệp .docx vào thư mục Drive "Bài nộp Soạn thảo/<Lớp>/"
+ *   - lưu tệp .docx / .xlsx vào thư mục Drive "Bài nộp Soạn thảo/<Lớp>/"
  * Trang tính "Bảng điểm" tự tổng hợp điểm cao nhất của mỗi học sinh theo từng bài.
  */
 
@@ -29,8 +29,12 @@ function doPost(e) {
     let link = ''
     if (d.tep) {
       const thuMuc = layThuMuc(sachTen(d.lop))
-      const ten = `${sachTen(d.lop)} - ${sachTen(d.hoTen)} - ${sachTen(d.tenTep || d.maBai)} - ${Utilities.formatDate(new Date(), 'Asia/Ho_Chi_Minh', 'dd-MM HH.mm')}.docx`
-      const blob = Utilities.newBlob(Utilities.base64Decode(d.tep), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', ten)
+      const duoi = d.duoiTep === 'xlsx' ? 'xlsx' : 'docx'
+      const mime = duoi === 'xlsx'
+        ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      const ten = `${sachTen(d.lop)} - ${sachTen(d.hoTen)} - ${sachTen(d.tenTep || d.maBai)} - ${Utilities.formatDate(new Date(), 'Asia/Ho_Chi_Minh', 'dd-MM HH.mm')}.${duoi}`
+      const blob = Utilities.newBlob(Utilities.base64Decode(d.tep), mime, ten)
       link = thuMuc.createFile(blob).getUrl()
     }
 
