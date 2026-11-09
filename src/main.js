@@ -11,7 +11,9 @@ import { findNext, replaceAll, replaceCurrent, findAll } from './find-replace.js
 import { PAGE_SIZES, DEFAULT_PAGE, applyPage } from './page.js'
 import { LESSONS } from './lessons.js'
 import { checkExercise, DEFAULT_RUN } from './checker.js'
-import { loadSubmitConfig, saveSubmitConfig, studentLink, getStudent, setStudent, submit } from './submit.js'
+import { loadSubmitConfig, saveSubmitConfig, studentLink, getStudent, submit } from './submit.js'
+import { userKey, examFromUrl, examLink, examState, markExamSubmitted } from './session.js'
+import { initSession, askName, renderUserChip, lockScreen, startCountdown } from './session-ui.js'
 
 const $ = (s, r = document) => r.querySelector(s)
 const $$ = (s, r = document) => [...r.querySelectorAll(s)]
@@ -37,7 +39,9 @@ const storage = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)) } catch { /* bộ nhớ đầy hoặc bị chặn */ } },
   del(k) { try { localStorage.removeItem(k) } catch { /* bỏ qua */ } },
 }
-const docKey = () => (currentLesson ? `stt:ex:${currentLesson.id}` : 'stt:free')
+const docKey = () => userKey(currentLesson ? `stt:ex:${currentLesson.id}` : 'stt:free')
+const FREE = () => userKey('stt:free')
+const DONE = () => userKey('stt:done')
 
 // ---------------- Trình soạn thảo ----------------
 const commonExtensions = () => [
@@ -243,8 +247,8 @@ const ACTIONS = {
   new: async () => {
     if (!(await confirmBox('Văn bản mới', 'Xoá nội dung đang có để bắt đầu văn bản mới?'))) return
     if (currentLesson) closeLesson()
-    storage.del('stt:free')
-    loadDoc('stt:free', '<p></p>', 'Văn bản của em')
+    storage.del(FREE())
+    loadDoc(FREE(), '<p></p>', 'Văn bản của em')
   },
   open: () => $('#openInput').click(),
   save: saveDocx,
@@ -274,7 +278,7 @@ const ACTIONS = {
   closeHF: () => closeHF(),
   gotoHeader: () => editHF('header'),
   gotoFooter: () => editHF('footer'),
-  student: () => askStudent(),
+  student: async () => { if (await askName({ allowGuest: false, cancellable: true })) { saveNow(); renderStudentChip() } },
   submitSetup: openSetup,
 }
 $$('[data-act]').forEach((b) => b.addEventListener('click', () => ACTIONS[b.dataset.act]()))
@@ -487,7 +491,7 @@ function syncToolbar() {
   $('#tableTab').classList.toggle('hidden', !inTable || +$('#level').value < 6)
   if (!inTable && $('#tableTab').classList.contains('active')) showTab('home')
   const img = selectedImage()
-  $('#imageTab').classList.toggle('hidden', !img || +$('#level').value < 8)
+  $('#imageTab').classList.toggle('hidden', !img || +$('#level').value < 5)
   if (img) $$('[data-wrap]').forEach((b) => b.classList.toggle('on', (img.attrs.wrap || 'inline') === b.dataset.wrap))
   if (!img && $('#imageTab').classList.contains('active')) showTab('home')
   $('#titlePage').checked = !!page.titlePage
@@ -690,9 +694,9 @@ function renderLessonList() {
     if (lv !== 9 && l.lop !== lv) continue
     ;(groups[`Lớp ${l.lop} — ${l.bai}`] ||= []).push(l)
   }
-  const done = storage.get('stt:done') || {}
+  const done = storage.get(DONE()) || {}
   $('#lessonList').innerHTML =
-    Object.entries(groups).map(([g, ls]) => `<div class="lgroup"><div class="lgroup-title">${g}</div>${ls.map((l) => `<button class="lesson-item" data-id="${l.id}"><span>${l.title}</span>${done[l.id] ? '<span class="done">✓</span>' : ''}</button>`).join('')}</div>`).join('') ||
+    Object.entries(groups).map(([g, ls]) => `<div class="lgroup"><div class="lgroup-title">${g}</div>${ls.map((l) => `<button class="lesson-item" data-id="${l.id}"><span>${l.vanDung ? '<span class="vd-tag">Vận dụng</span> ' : ''}${l.title}</span>${done[l.id] ? '<span class="done">✓</span>' : ''}</button>`).join('')}</div>`).join('') ||
     '<p class="muted">Chưa có bài tập cho mức này.</p>'
   $('#lessonList').insertAdjacentHTML('beforeend', `<div class="lesson-foot"><button id="loadLessonFile">Mở đề bài từ tệp (.json)…</button><input type="file" id="lessonFile" accept=".json" hidden></div>`)
   $('#loadLessonFile').onclick = () => $('#lessonFile').click()
@@ -727,11 +731,25 @@ function openLesson(l) {
   $('#lessonList').classList.add('hidden')
   const v = $('#lessonView')
   v.classList.remove('hidden')
-  v.innerHTML = `
-    <button class="back" id="backToList">‹ Danh sách bài</button>
+  v.innerHTML = examMode
+    ? `
+    <div class="exam-head"><span>BÀI KIỂM TRA</span><span class="exam-clock" id="examClock">--:--</span></div>
     <div class="lesson-bai">Lớp ${l.lop} · ${l.bai}</div>
     <h3>${l.title}</h3>
     <p>${l.intro}</p>
+    ${l.show ? `<div class="sample"><div class="sample-label">Mẫu</div>${l.show}</div>` : ''}
+    <ol class="steps exam">${l.steps.map((s, i) => `<li data-i="${i}"><span class="mark num">${i + 1}</span><div>${s.text}</div></li>`).join('')}</ol>
+    <p class="dlg-note">Làm xong bấm <b>Nộp bài</b>. Chỉ được nộp một lần; hết giờ máy tự nộp.</p>
+    <div class="lesson-actions submit-row">
+      <span class="student-chip" id="studentChip"></span>
+      <button id="submitLesson" class="btn-primary submit-btn">Nộp bài</button>
+    </div>`
+    : `
+    <button class="back" id="backToList">‹ Danh sách bài</button>
+    <div class="lesson-bai">Lớp ${l.lop} · ${l.bai}</div>
+    <h3>${l.vanDung ? '<span class="vd-tag">Vận dụng</span> ' : ''}${l.title}</h3>
+    <p>${l.intro}</p>
+    ${l.vanDung ? '<p class="vd-note">Bài vận dụng: em tự chọn nội dung. Máy chỉ kiểm tra các kĩ năng bên dưới, thầy cô sẽ xem bài em nộp.</p>' : ''}
     ${l.show ? `<div class="sample"><div class="sample-label">Mẫu</div>${l.show}</div>` : ''}
     <ol class="steps">${l.steps.map((s, i) => `<li data-i="${i}"><span class="mark"></span><div><div>${s.text}</div><div class="hint-text"></div></div></li>`).join('')}</ol>
     <div class="score" id="score"></div>
@@ -745,6 +763,7 @@ function openLesson(l) {
     </div>`
   renderStudentChip()
   $('#submitLesson').onclick = () => doSubmit()
+  if (examMode) return
   $('#backToList').onclick = closeLesson
   $('#resetLesson').onclick = async () => {
     if (!(await confirmBox('Làm lại', 'Xoá bài đang làm và bắt đầu lại?'))) return
@@ -760,6 +779,7 @@ function openLesson(l) {
 function runCheck() {
   const l = currentLesson
   const res = checkExercise(l, body.getJSON(), page, hfJSON())
+  if (examMode) return res // kiểm tra: không hiện kết quả cho học sinh
   res.forEach((r, i) => {
     const li = $(`.steps li[data-i="${i}"]`)
     li.classList.toggle('ok', r.ok)
@@ -771,9 +791,9 @@ function runCheck() {
   $('#score').className = `score ${all ? 'win' : ''}`
   $('#score').textContent = all ? `Tuyệt vời! Em đã hoàn thành ${n}/${res.length} yêu cầu.` : `Đạt ${n}/${res.length} yêu cầu. Xem gợi ý màu đỏ để sửa nhé.`
   if (all) {
-    const done = storage.get('stt:done') || {}
+    const done = storage.get(DONE()) || {}
     done[l.id] = true
-    storage.set('stt:done', done)
+    storage.set(DONE(), done)
   }
   return res
 }
@@ -783,53 +803,45 @@ function closeLesson() {
   $('#lessonView').classList.add('hidden')
   $('#lessonList').classList.remove('hidden')
   renderLessonList()
-  loadDoc('stt:free', '<p></p>', 'Văn bản của em')
+  loadDoc(FREE(), '<p></p>', 'Văn bản của em')
 }
 
 // ---------------- Nộp bài ----------------
 let submitCfg = loadSubmitConfig()
 // ẩn địa chỉ nộp bài khỏi thanh địa chỉ sau khi đã nhớ
-if (new URLSearchParams(location.search).get('nop')) history.replaceState(null, '', location.pathname)
+const examCfg = examFromUrl()
+if (location.search) history.replaceState(null, '', location.pathname)
 
 function renderStudentChip() {
+  renderUserChip()
   const chip = $('#studentChip')
   if (!chip) return
   const st = getStudent()
-  chip.innerHTML = st ? 'Em: <b></b> · <span></span> <button type="button">đổi</button>' : '<button type="button">Nhập tên và lớp</button>'
+  chip.innerHTML = st ? 'Em: <b></b> · <span></span>' : '<span class="muted">Chưa có tên (đang dùng thử)</span>'
   if (st) {
     $('b', chip).textContent = st.hoTen
     $('span', chip).textContent = st.lop
   }
-  $('button', chip).onclick = () => askStudent()
 }
 
-function askStudent() {
-  const d = $('#studentDialog')
-  const f = $('form', d)
-  const st = getStudent() || {}
-  f.hoTen.value = st.hoTen || ''
-  f.lop.value = st.lop || ''
-  d.showModal()
-  return new Promise((resolve) => {
-    d.onclose = () => {
-      if (d.returnValue !== 'ok') return resolve(getStudent())
-      const v = { hoTen: f.hoTen.value.trim().replace(/\s+/g, ' '), lop: f.lop.value.trim().toUpperCase() }
-      if (v.hoTen && v.lop) setStudent(v)
-      renderStudentChip()
-      resolve(getStudent())
-    }
-  })
+// Khách muốn nộp bài: hỏi tên, rồi lưu bài đang làm sang tên đó
+async function askStudent() {
+  const u = await askName({ allowGuest: false, cancellable: true, title: 'Nộp bài', note: 'Nhập họ tên và lớp để thầy cô ghi điểm cho em.' })
+  if (u) saveNow()
+  renderStudentChip()
+  return getStudent()
 }
 
 let sending = false
-async function doSubmit() {
+async function doSubmit({ auto = false } = {}) {
   if (sending) return
   if (!submitCfg?.url) return toast('Thầy cô chưa cài đặt nộp bài. Hãy mở bằng đường link thầy cô gửi.')
   let st = getStudent()
   if (!st) st = await askStudent()
   if (!st) return
+  if (examMode?.submitted) return
   const what = currentLesson ? `bài “${currentLesson.title}”` : 'văn bản này'
-  if (!(await confirmBox('Nộp bài', `${st.hoTen} (${st.lop}) nộp ${what} cho thầy cô?`))) return
+  if (!auto && !(await confirmBox('Nộp bài', `${st.hoTen} (${st.lop}) nộp ${what} cho thầy cô?${examMode ? ' Bài kiểm tra chỉ được nộp một lần.' : ''}`))) return
   sending = true
   const btns = $$('[data-act="submit"], #submitLesson')
   btns.forEach((b) => (b.disabled = true))
@@ -839,9 +851,12 @@ async function doSubmit() {
     const results = currentLesson ? runCheck() : null
     const { exportDocx } = await import('./export-docx.js')
     const docxBlob = await exportDocx(body.getJSON(), page, DEFAULTS, hfJSON())
-    const r = await submit(submitCfg, st, { lesson: currentLesson, results, docxBlob, fileName: $('#fileName').value.trim() || 'van-ban' })
-    if (r.ok) toast(r.confirmed ? 'Nộp bài thành công!' : 'Đã gửi bài. Nếu thầy cô chưa nhận được, em nộp lại nhé.')
-    else toast(`Chưa nộp được: ${r.error}`)
+    const lesson = currentLesson && examMode ? { ...currentLesson, id: `${currentLesson.id}:kt`, bai: `KIỂM TRA · ${currentLesson.bai}` } : currentLesson
+    const r = await submit(submitCfg, st, { lesson, results, docxBlob, fileName: $('#fileName').value.trim() || 'van-ban' })
+    if (r.ok) {
+      toast(r.confirmed ? 'Nộp bài thành công!' : 'Đã gửi bài. Nếu thầy cô chưa nhận được, em nộp lại nhé.')
+      if (examMode) finishExam()
+    } else toast(`Chưa nộp được: ${r.error}${examMode ? ' Bấm Nộp bài để thử lại.' : ''}`)
   } catch (err) {
     console.error(err)
     toast('Chưa nộp được bài, em thử lại nhé.')
@@ -861,6 +876,15 @@ function openSetup() {
     const url = f.url.value.trim()
     $('#linkBox').classList.toggle('hidden', !url)
     if (url) $('#studentLink').value = studentLink({ url, khoa: f.khoa.value.trim() })
+    $('#examBox').classList.toggle('hidden', !url)
+    if (url) $('#examLinkOut').value = examLink($('#studentLink').value, $('#examLesson').value, +$('#examMinutes').value || 30)
+  }
+  $('#examLesson').innerHTML = LESSONS.map((l) => `<option value="${l.id}">Lớp ${l.lop} · ${l.title}</option>`).join('')
+  $('#examLesson').onchange = showLink
+  $('#examMinutes').oninput = showLink
+  $('#copyExam').onclick = async () => {
+    try { await navigator.clipboard.writeText($('#examLinkOut').value); $('#copyExam').textContent = 'Đã chép ✓' } catch { $('#examLinkOut').select() }
+    setTimeout(() => ($('#copyExam').textContent = 'Sao chép'), 1500)
   }
   f.url.oninput = showLink
   f.khoa.oninput = showLink
@@ -914,7 +938,54 @@ function toast(msg) {
 }
 
 // ---------------- Khởi động ----------------
+// ---------------- Chế độ kiểm tra ----------------
+let examMode = null // { lesson, minutes, submitted, stop }
+function startExam(cfg) {
+  const l = LESSONS.find((x) => x.id === cfg.lessonId)
+  if (!l) return toast('Link kiểm tra không đúng (không tìm thấy bài).')
+  if (!submitCfg?.url) toast('Chưa có địa chỉ nộp bài: hãy mở đúng link kiểm tra thầy cô gửi.')
+  examMode = { lesson: l, minutes: cfg.minutes, submitted: false }
+  document.body.classList.add('exam-mode')
+  $('#lessons').classList.remove('hidden')
+  openLesson(l)
+  const st = examState('word', l.id)
+  if (st.submittedAt) return finishExam(st.submittedAt)
+  examMode.stop = startCountdown($('#examClock'), st.start + cfg.minutes * 60000, () => {
+    toast('Hết giờ! Máy đang tự nộp bài…')
+    doSubmit({ auto: true })
+  })
+}
+function finishExam(at) {
+  const st = at ? { submittedAt: at } : markExamSubmitted('word', examMode.lesson.id)
+  examMode.submitted = true
+  examMode.stop?.()
+  saveNow()
+  body.setEditable(false)
+  header.setEditable(false)
+  footer.setEditable(false)
+  const t = new Date(st.submittedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+  lockScreen(`Em đã nộp bài lúc ${t}. Chờ thầy cô hướng dẫn nhé.`)
+}
+
+// ---------------- Khởi động ----------------
 setLevel(storage.get('stt:level') ?? 6)
-loadDoc('stt:free', '<p></p>', 'Văn bản của em')
 syncToolbar()
-window.addEventListener('beforeunload', saveNow)
+window.addEventListener('beforeunload', () => { if (!examMode?.submitted) saveNow() })
+initSession({
+  exam: examCfg,
+  onEndRequest: async () => {
+    saveNow()
+    const u = getStudent()
+    return confirmBox('Đổi người dùng', u ? `Kết thúc buổi học của ${u.hoTen}? Bài của em đã được lưu.` : 'Kết thúc phiên dùng thử? Bài làm thử sẽ bị xoá.')
+  },
+  onChange: () => {
+    currentLesson = null
+    $('#lessonView').classList.add('hidden')
+    $('#lessonList').classList.remove('hidden')
+    if (!$('#lessons').classList.contains('hidden')) renderLessonList()
+    loadDoc(FREE(), '<p></p>', 'Văn bản của em')
+  },
+}).then(() => {
+  loadDoc(FREE(), '<p></p>', 'Văn bản của em')
+  if (examCfg) startExam(examCfg)
+})

@@ -7,7 +7,9 @@ import { renderCharts, chartDefaults } from './charts.js'
 import { LESSONS } from './lessons.js'
 import { checkExercise } from './checker.js'
 import { FUNCTIONS } from './functions.js'
-import { loadSubmitConfig, saveSubmitConfig, studentLink, getStudent, setStudent, submit } from '../../src/submit.js'
+import { loadSubmitConfig, saveSubmitConfig, studentLink, getStudent, submit } from '../../src/submit.js'
+import { userKey, examFromUrl, examLink, examState, markExamSubmitted } from '../../src/session.js'
+import { initSession, askName, renderUserChip, lockScreen, startCountdown } from '../../src/session-ui.js'
 
 const $ = (s, r = document) => r.querySelector(s)
 const $$ = (s, r = document) => [...r.querySelectorAll(s)]
@@ -98,6 +100,7 @@ function expandMerges(rg) {
   return rg
 }
 function select(r, c, extend = false) {
+  tabStartCol = null
   r = Math.max(0, Math.min(ROWS - 1, r))
   c = Math.max(0, Math.min(COLS - 1, c))
   if (extend) {
@@ -454,6 +457,28 @@ function commitEdit() {
   render()
   return true
 }
+// Giống Excel: gõ – Tab – Tab – Enter thì xuống hàng dưới, về lại cột bắt đầu
+let tabStartCol = null
+function tabKey(shift, isEditing) {
+  if (tabStartCol === null) tabStartCol = sel.c
+  if (isEditing) {
+    if (!commitEdit()) return
+    input.focus()
+  }
+  const keep = tabStartCol
+  move(0, shift ? -1 : 1)
+  tabStartCol = keep
+}
+function enterKey(shift, isEditing) {
+  const col = tabStartCol
+  if (isEditing) {
+    if (!commitEdit()) return
+    input.focus()
+  }
+  if (col !== null && !shift) select(sel.r + 1, col)
+  else move(shift ? -1 : 1, 0)
+  tabStartCol = null
+}
 function commitAndMove(dr, dc) {
   if (commitEdit()) {
     move(dr, dc)
@@ -505,8 +530,8 @@ input.addEventListener('keydown', (e) => {
       input.dispatchEvent(new Event('input'))
       return
     }
-    if (k === 'Enter') { e.preventDefault(); return commitAndMove(e.shiftKey ? -1 : 1, 0) }
-    if (k === 'Tab') { e.preventDefault(); return commitAndMove(0, e.shiftKey ? -1 : 1) }
+    if (k === 'Enter') { e.preventDefault(); return enterKey(e.shiftKey, true) }
+    if (k === 'Tab') { e.preventDefault(); return tabKey(e.shiftKey, true) }
     if (k === 'Escape') { e.preventDefault(); return cancelEdit() }
     if (k === 'F2') { e.preventDefault(); editing.mode = editing.mode === 'enter' ? 'edit' : 'enter'; return }
     if (k === 'F4' && isFormula(input.value)) { e.preventDefault(); return toggleAbsolute() }
@@ -529,8 +554,8 @@ input.addEventListener('keydown', (e) => {
     if (ctrl) return jumpEdge(...arrows[k], e.shiftKey)
     return move(...arrows[k], e.shiftKey)
   }
-  if (k === 'Enter') { e.preventDefault(); return move(e.shiftKey ? -1 : 1, 0) }
-  if (k === 'Tab') { e.preventDefault(); return move(0, e.shiftKey ? -1 : 1) }
+  if (k === 'Enter') { e.preventDefault(); return enterKey(e.shiftKey, false) }
+  if (k === 'Tab') { e.preventDefault(); return tabKey(e.shiftKey, false) }
   if (k === 'F2') { e.preventDefault(); return startEdit('edit') }
   if (k === 'Delete' || k === 'Backspace') { e.preventDefault(); return clearContents() }
   if (k === 'Escape') { clearCopy(); return }
@@ -1740,8 +1765,8 @@ const ACTIONS = {
   new: async () => {
     if (!(await showAlert('Bảng tính mới', 'Xoá dữ liệu đang có để bắt đầu bảng tính mới?', true))) return
     if (currentLesson) closeLesson()
-    storage.del('bt:free')
-    loadBook('bt:free', null, 'Bảng tính của em')
+    storage.del(FREE())
+    loadBook(FREE(), null, 'Bảng tính của em')
   },
   open: () => $('#openInput').click(),
   save: () => saveXlsx(),
@@ -1815,7 +1840,7 @@ const ACTIONS = {
     selectChart(null)
   },
   submit: () => doSubmit(),
-  student: () => askStudent(),
+  student: async () => { if (await askName({ allowGuest: false, cancellable: true })) { saveNow(); renderStudentChip() } },
   submitSetup: () => openSetup(),
 }
 document.addEventListener('click', (e) => {
@@ -1939,7 +1964,9 @@ $('#zoom').addEventListener('input', (e) => {
 })
 
 // ================= Lưu tạm =================
-const docKey = () => (currentLesson ? `bt:ex:${currentLesson.id}` : 'bt:free')
+const docKey = () => userKey(currentLesson ? `bt:ex:${currentLesson.id}` : 'bt:free')
+const FREE = () => userKey('bt:free')
+const DONE = () => userKey('bt:done')
 let saveTimer
 function scheduleSave() {
   $('#saveState').textContent = 'Đang lưu…'
@@ -2088,8 +2115,8 @@ function renderLessonList() {
     if (lv !== 99 && l.lop !== lv) continue
     ;(groups[`Lớp ${l.lop} — ${l.bai}`] ||= []).push(l)
   }
-  const done = storage.get('bt:done') || {}
-  $('#lessonList').innerHTML = Object.entries(groups).map(([g, ls]) => `<div class="lgroup"><div class="lgroup-title">${g}</div>${ls.map((l) => `<button class="lesson-item" data-id="${l.id}"><span>${l.title}</span>${done[l.id] ? '<span class="done">✓</span>' : ''}</button>`).join('')}</div>`).join('') || '<p class="muted">Chưa có bài tập cho mức này.</p>'
+  const done = storage.get(DONE()) || {}
+  $('#lessonList').innerHTML = Object.entries(groups).map(([g, ls]) => `<div class="lgroup"><div class="lgroup-title">${g}</div>${ls.map((l) => `<button class="lesson-item" data-id="${l.id}"><span>${l.vanDung ? '<span class="vd-tag">Vận dụng</span> ' : ''}${l.title}</span>${done[l.id] ? '<span class="done">✓</span>' : ''}</button>`).join('')}</div>`).join('') || '<p class="muted">Chưa có bài tập cho mức này.</p>'
 }
 $('#lessonList').addEventListener('click', (e) => {
   const b = e.target.closest('.lesson-item')
@@ -2111,11 +2138,24 @@ function openLesson(l) {
   $('#lessonList').classList.add('hidden')
   const v = $('#lessonView')
   v.classList.remove('hidden')
-  v.innerHTML = `
-    <button class="back" id="backToList">‹ Danh sách bài</button>
+  v.innerHTML = examMode
+    ? `
+    <div class="exam-head"><span>BÀI KIỂM TRA</span><span class="exam-clock" id="examClock">--:--</span></div>
     <div class="lesson-bai">Lớp ${l.lop} · ${l.bai}</div>
     <h3>${l.title}</h3>
     <p>${l.intro}</p>
+    <ol class="steps exam">${l.steps.map((s, i) => `<li data-i="${i}"><span class="mark num">${i + 1}</span><div>${s.text}</div></li>`).join('')}</ol>
+    <p class="dlg-note">Làm xong bấm <b>Nộp bài</b>. Chỉ được nộp một lần; hết giờ máy tự nộp.</p>
+    <div class="lesson-actions submit-row">
+      <span class="student-chip" id="studentChip"></span>
+      <button id="submitLesson" class="btn-primary submit-btn">Nộp bài</button>
+    </div>`
+    : `
+    <button class="back" id="backToList">‹ Danh sách bài</button>
+    <div class="lesson-bai">Lớp ${l.lop} · ${l.bai}</div>
+    <h3>${l.vanDung ? '<span class="vd-tag">Vận dụng</span> ' : ''}${l.title}</h3>
+    <p>${l.intro}</p>
+    ${l.vanDung ? '<p class="vd-note">Bài vận dụng: em tự chọn nội dung. Máy chỉ kiểm tra các kĩ năng bên dưới, thầy cô sẽ xem bài em nộp.</p>' : ''}
     <ol class="steps">${l.steps.map((s, i) => `<li data-i="${i}"><span class="mark"></span><div><div>${s.text}</div><div class="hint-text"></div></div></li>`).join('')}</ol>
     <div class="score" id="score"></div>
     <div class="lesson-actions">
@@ -2127,6 +2167,8 @@ function openLesson(l) {
       <button id="submitLesson" class="btn-primary submit-btn">Nộp bài</button>
     </div>`
   renderStudentChip()
+  $('#submitLesson').onclick = () => doSubmit()
+  if (examMode) return
   $('#backToList').onclick = closeLesson
   $('#resetLesson').onclick = async () => {
     if (!(await showAlert('Làm lại', 'Xoá bài đang làm và bắt đầu lại?', true))) return
@@ -2136,7 +2178,6 @@ function openLesson(l) {
     $('#score').textContent = ''
   }
   $('#checkLesson').onclick = runCheck
-  $('#submitLesson').onclick = () => doSubmit()
 }
 function runCheck() {
   if (editing && !commitEdit()) return null
@@ -2144,6 +2185,7 @@ function runCheck() {
   engine.reset()
   const res = checkExercise(l, wb, engine, { hiddenRows: (sh) => { const save = hiddenRows; computeHidden(sh); const h = hiddenRows; hiddenRows = save; return h } })
   render()
+  if (examMode) return res // kiểm tra: không hiện kết quả cho học sinh
   res.forEach((r, i) => {
     const li = $(`.steps li[data-i="${i}"]`)
     li.classList.toggle('ok', r.ok)
@@ -2155,9 +2197,9 @@ function runCheck() {
   $('#score').className = `score ${all ? 'win' : ''}`
   $('#score').textContent = all ? `Tuyệt vời! Em đã hoàn thành ${n}/${res.length} yêu cầu.` : `Đạt ${n}/${res.length} yêu cầu. Xem gợi ý màu đỏ để sửa nhé.`
   if (all) {
-    const done = storage.get('bt:done') || {}
+    const done = storage.get(DONE()) || {}
     done[l.id] = true
-    storage.set('bt:done', done)
+    storage.set(DONE(), done)
   }
   return res
 }
@@ -2167,46 +2209,39 @@ function closeLesson() {
   $('#lessonView').classList.add('hidden')
   $('#lessonList').classList.remove('hidden')
   renderLessonList()
-  loadBook('bt:free', null, 'Bảng tính của em')
+  loadBook(FREE(), null, 'Bảng tính của em')
 }
 
 // ================= Nộp bài =================
 let submitCfg = loadSubmitConfig()
-if (new URLSearchParams(location.search).get('nop')) history.replaceState(null, '', location.pathname)
+const examCfg = examFromUrl()
+if (location.search) history.replaceState(null, '', location.pathname)
 function renderStudentChip() {
+  renderUserChip()
   const chip = $('#studentChip')
   if (!chip) return
   const st = getStudent()
-  chip.innerHTML = st ? 'Em: <b></b> · <span></span> <button type="button">đổi</button>' : '<button type="button">Nhập tên và lớp</button>'
+  chip.innerHTML = st ? 'Em: <b></b> · <span></span>' : '<span class="muted">Chưa có tên (đang dùng thử)</span>'
   if (st) { $('b', chip).textContent = st.hoTen; $('span', chip).textContent = st.lop }
-  $('button', chip).onclick = () => askStudent()
 }
-function askStudent() {
-  const d = $('#studentDialog')
-  const f = $('form', d)
-  const st = getStudent() || {}
-  f.hoTen.value = st.hoTen || ''
-  f.lop.value = st.lop || ''
-  d.showModal()
-  return new Promise((resolve) => {
-    d.onclose = () => {
-      if (d.returnValue !== 'ok') return resolve(getStudent())
-      const v = { hoTen: f.hoTen.value.trim().replace(/\s+/g, ' '), lop: f.lop.value.trim().toUpperCase() }
-      if (v.hoTen && v.lop) setStudent(v)
-      renderStudentChip()
-      resolve(getStudent())
-    }
-  })
+// Khách muốn nộp bài: hỏi tên, rồi lưu bài đang làm sang tên đó
+async function askStudent() {
+  const u = await askName({ allowGuest: false, cancellable: true, title: 'Nộp bài', note: 'Nhập họ tên và lớp để thầy cô ghi điểm cho em.' })
+  if (u) saveNow()
+  renderStudentChip()
+  return getStudent()
 }
 let sending = false
-async function doSubmit() {
+async function doSubmit({ auto = false } = {}) {
   if (sending) return
   if (!submitCfg?.url) return toast('Thầy cô chưa cài đặt nộp bài. Hãy mở bằng đường link thầy cô gửi.')
   let st = getStudent()
   if (!st) st = await askStudent()
   if (!st) return
+  if (examMode?.submitted) return
   const what = currentLesson ? `bài “${currentLesson.title}”` : 'bảng tính này'
-  if (!(await showAlert('Nộp bài', `${st.hoTen} (${st.lop}) nộp ${what} cho thầy cô?`, true))) return
+  if (!auto && !(await showAlert('Nộp bài', `${st.hoTen} (${st.lop}) nộp ${what} cho thầy cô?${examMode ? ' Bài kiểm tra chỉ được nộp một lần.' : ''}`, true))) return
+  if (editing) commitEdit()
   sending = true
   const btns = $$('[data-act="submit"], #submitLesson')
   btns.forEach((b) => (b.disabled = true))
@@ -2216,10 +2251,12 @@ async function doSubmit() {
     const results = currentLesson ? runCheck() : null
     const { exportXlsx } = await import('./xlsx.js')
     const blob = await exportXlsx(wb, engine, { chartImage })
-    const lesson = currentLesson ? { ...currentLesson, bai: `Bảng tính · ${currentLesson.bai}` } : null
+    const lesson = currentLesson ? { ...currentLesson, id: examMode ? `${currentLesson.id}:kt` : currentLesson.id, bai: `${examMode ? 'KIỂM TRA · ' : ''}Bảng tính · ${currentLesson.bai}` } : null
     const r = await submit(submitCfg, st, { lesson, results, docxBlob: blob, fileName: $('#fileName').value.trim() || 'bang-tinh', ext: 'xlsx' })
-    if (r.ok) toast(r.confirmed ? 'Nộp bài thành công!' : 'Đã gửi bài. Nếu thầy cô chưa nhận được, em nộp lại nhé.')
-    else toast(`Chưa nộp được: ${r.error}`)
+    if (r.ok) {
+      toast(r.confirmed ? 'Nộp bài thành công!' : 'Đã gửi bài. Nếu thầy cô chưa nhận được, em nộp lại nhé.')
+      if (examMode) finishExam()
+    } else toast(`Chưa nộp được: ${r.error}${examMode ? ' Bấm Nộp bài để thử lại.' : ''}`)
   } catch (err) {
     console.error(err)
     toast('Chưa nộp được bài, em thử lại nhé.')
@@ -2238,6 +2275,15 @@ function openSetup() {
     const url = f.url.value.trim()
     $('#linkBox').classList.toggle('hidden', !url)
     if (url) $('#studentLink').value = studentLink({ url, khoa: f.khoa.value.trim() })
+    $('#examBox').classList.toggle('hidden', !url)
+    if (url) $('#examLinkOut').value = examLink($('#studentLink').value, $('#examLesson').value, +$('#examMinutes').value || 30)
+  }
+  $('#examLesson').innerHTML = LESSONS.map((l) => `<option value="${l.id}">Lớp ${l.lop} · ${l.title}</option>`).join('')
+  $('#examLesson').onchange = showLink
+  $('#examMinutes').oninput = showLink
+  $('#copyExam').onclick = async () => {
+    try { await navigator.clipboard.writeText($('#examLinkOut').value); $('#copyExam').textContent = 'Đã chép ✓' } catch { $('#examLinkOut').select() }
+    setTimeout(() => ($('#copyExam').textContent = 'Sao chép'), 1500)
   }
   f.url.oninput = showLink
   f.khoa.oninput = showLink
@@ -2269,10 +2315,54 @@ function openSetup() {
 }
 
 // ================= Khởi động =================
+// ================= Chế độ kiểm tra =================
+let examMode = null
+function startExam(cfg) {
+  const l = LESSONS.find((x) => x.id === cfg.lessonId)
+  if (!l) return toast('Link kiểm tra không đúng (không tìm thấy bài).')
+  if (!submitCfg?.url) toast('Chưa có địa chỉ nộp bài: hãy mở đúng link kiểm tra thầy cô gửi.')
+  examMode = { lesson: l, minutes: cfg.minutes, submitted: false }
+  document.body.classList.add('exam-mode')
+  $('#lessons').classList.remove('hidden')
+  openLesson(l)
+  const st = examState('sheet', l.id)
+  if (st.submittedAt) return finishExam(st.submittedAt)
+  examMode.stop = startCountdown($('#examClock'), st.start + cfg.minutes * 60000, () => {
+    toast('Hết giờ! Máy đang tự nộp bài…')
+    doSubmit({ auto: true })
+  })
+}
+function finishExam(at) {
+  const st = at ? { submittedAt: at } : markExamSubmitted('sheet', examMode.lesson.id)
+  examMode.submitted = true
+  examMode.stop?.()
+  saveNow()
+  const t = new Date(st.submittedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+  lockScreen(`Em đã nộp bài lúc ${t}. Chờ thầy cô hướng dẫn nhé.`)
+}
+
 buildGrid()
 setLevel(storage.get('bt:level') ?? 7)
-loadBook('bt:free', null, 'Bảng tính của em')
-window.addEventListener('beforeunload', () => { if (editing) commitEdit(); saveNow() })
+window.addEventListener('beforeunload', () => { if (examMode?.submitted) return; if (editing) commitEdit(); saveNow() })
+initSession({
+  exam: examCfg,
+  onEndRequest: async () => {
+    if (editing) commitEdit()
+    saveNow()
+    const u = getStudent()
+    return showAlert('Đổi người dùng', u ? `Kết thúc buổi học của ${u.hoTen}? Bài của em đã được lưu.` : 'Kết thúc phiên dùng thử? Bài làm thử sẽ bị xoá.', true)
+  },
+  onChange: () => {
+    currentLesson = null
+    $('#lessonView').classList.add('hidden')
+    $('#lessonList').classList.remove('hidden')
+    if (!$('#lessons').classList.contains('hidden')) renderLessonList()
+    loadBook(FREE(), null, 'Bảng tính của em')
+  },
+}).then(() => {
+  loadBook(FREE(), null, 'Bảng tính của em')
+  if (examCfg) startExam(examCfg)
+})
 window.addEventListener('resize', () => updateSelection())
 document.addEventListener('keydown', (e) => {
   // phím tắt khi đang đứng ở ribbon (không ở ô): Esc quay lại lưới

@@ -268,6 +268,52 @@ export function checkStep(check, info, page, extra) {
       }
       return { ok: true, hint: '' }
     }
+    // ---------- kiểu chấm mềm cho bài vận dụng ----------
+    case 'minParagraphs': {
+      const n = info.blocks.filter((b) => !b.inTable && b.text.replace(/\uFFFC/g, '').trim().length >= (c.minChars || 1)).length
+      return { ok: n >= c.n, hint: n >= c.n ? '' : `Văn bản mới có ${n} đoạn/dòng có chữ, cần ít nhất ${c.n}.` }
+    }
+    case 'minWords': {
+      const n = info.fullText.replace(/\uFFFC/g, ' ').trim().split(/\s+/).filter(Boolean).length
+      return { ok: n >= c.n, hint: n >= c.n ? '' : `Văn bản mới có ${n} từ, cần ít nhất ${c.n} từ.` }
+    }
+    case 'anyFormat': {
+      const ok = info.blocks.some((b) => b.chars.some((x) => {
+        if (!x.c.trim()) return false
+        const m = x.marks
+        if (c.bold && !m.bold) return false
+        if (c.italic && !m.italic) return false
+        if (c.underline && !m.underline) return false
+        if (c.color && !(m.color && colorFamily(m.color) !== 'đen')) return false
+        if (c.fontSizeMin && !(parseFloat(m.fontSize) >= c.fontSizeMin)) return false
+        if (c.highlight && !m.highlight) return false
+        return true
+      }))
+      const what = [c.bold && 'in đậm', c.italic && 'in nghiêng', c.underline && 'gạch chân', c.color && 'có màu', c.fontSizeMin && `cỡ từ ${c.fontSizeMin} trở lên`, c.highlight && 'tô màu nền'].filter(Boolean).join(', ')
+      return { ok, hint: ok ? '' : `Chưa có chữ nào ${what}.` }
+    }
+    case 'anyAlign': {
+      const ok = info.blocks.some((b) => b.text.trim() && (b.attrs.textAlign || 'left') === c.value)
+      const name = { left: 'căn trái', center: 'căn giữa', right: 'căn phải', justify: 'căn đều hai bên' }[c.value]
+      return { ok, hint: ok ? '' : `Chưa có đoạn nào ${name}.` }
+    }
+    case 'anyPara': {
+      const ok = info.blocks.some((b) => b.text.trim() && (!c.indentFirst || b.attrs.indentFirst > 0) && (!c.lineHeightMin || parseFloat(b.attrs.lineHeight) >= c.lineHeightMin))
+      return { ok, hint: ok ? '' : c.indentFirst ? 'Chưa có đoạn nào thụt dòng đầu.' : `Chưa có đoạn nào giãn dòng từ ${c.lineHeightMin} trở lên.` }
+    }
+    case 'tableMin': {
+      const t = info.tables.find((t) => t.rows >= (c.rows || 1) && t.cols >= (c.cols || 1))
+      if (!t) return { ok: false, hint: `Cần một bảng ít nhất ${c.rows || 1} hàng × ${c.cols || 1} cột.` }
+      if (c.filled && t.cells.flat().filter((x) => !x).length > (c.allowEmpty || 0)) return { ok: false, hint: 'Bảng còn nhiều ô trống.' }
+      if (c.merged && !t.merged) return { ok: false, hint: 'Bảng chưa có ô nào được gộp.' }
+      return { ok: true, hint: '' }
+    }
+    case 'anyList': {
+      const items = info.blocks.filter((b) => b.list && (!c.kind || b.list === c.kind) && (!c.level || b.listDepth >= c.level))
+      const n = c.minItems || 2
+      const what = c.kind === 'ordered' ? 'đánh số' : c.kind === 'bullet' ? 'dấu đầu dòng' : 'liệt kê'
+      return { ok: items.length >= n, hint: items.length >= n ? '' : `Cần danh sách ${what}${c.level ? ` có mức ${c.level}` : ''} với ít nhất ${n} mục.` }
+    }
     case 'titlePage': {
       const ok = !!page.titlePage === c.value
       return { ok, hint: ok ? '' : 'Bật “Trang đầu khác” trong tab Đầu trang & Chân trang.' }

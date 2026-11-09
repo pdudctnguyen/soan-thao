@@ -390,6 +390,11 @@
         <div class="dlg-note">Gửi đường link này cho học sinh (đã kèm địa chỉ nộp bài):</div>
         <div class="dlg-row"><input id="studentLink" readonly /><button type="button" id="copyLink">Sao chép</button></div>
       </div>
+      <div id="examBox" class="link-box hidden">
+        <div class="dlg-note"><b>Link kiểm tra</b> — ẩn gợi ý, tính giờ, mỗi em chỉ nộp một lần, hết giờ tự nộp:</div>
+        <div class="dlg-row"><select id="examLesson"></select><input id="examMinutes" type="number" min="5" max="180" value="30" class="exam-min" /> phút</div>
+        <div class="dlg-row"><input id="examLinkOut" readonly /><button type="button" id="copyExam">Sao chép</button></div>
+      </div>
       <div class="dlg-actions"><button value="cancel" formnovalidate>Đóng</button><button value="ok" class="btn-primary">Lưu cài đặt</button></div>
     </form>
   </dialog>

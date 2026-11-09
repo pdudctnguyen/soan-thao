@@ -182,6 +182,61 @@ export function checkStep(c, wb, engine, ctx) {
       for (const { r, c: cc, a } of cellsOf(c)) if (raw(r, cc) === undefined || raw(r, cc) === '') return { ok: false, hint: `Ô ${a} còn trống.` }
       return { ok: true }
     }
+    // ---------- kiểu chấm mềm cho bài vận dụng (xét mọi trang tính) ----------
+    case 'minFilled': {
+      let n = 0
+      for (const s of wb.sheets) for (const cell of Object.values(s.cells)) if (cell.v !== undefined && cell.v !== '') n++
+      return { ok: n >= c.n, hint: n >= c.n ? '' : `Bảng tính mới có ${n} ô có dữ liệu, cần ít nhất ${c.n}.` }
+    }
+    case 'usesFunc': {
+      const fns = Array.isArray(c.func) ? c.func : [c.func]
+      let n = 0
+      for (const s of wb.sheets) for (const [k, cell] of Object.entries(s.cells)) {
+        if (!isFormula(cell.v)) continue
+        const up = cell.v.toUpperCase().replace(/\s/g, '')
+        if (!fns.some((fn) => up.includes(`${fn}(`))) continue
+        const [r, cc] = k.split(',').map(Number)
+        if (!isError(engine.value(s.name, r, cc))) n++
+      }
+      const need = c.min || 1
+      return { ok: n >= need, hint: n >= need ? '' : `Cần dùng hàm ${fns.join(' hoặc ')} ở ít nhất ${need} ô (công thức không báo lỗi).` }
+    }
+    case 'anyFormula': {
+      let n = 0
+      for (const s of wb.sheets) for (const [k, cell] of Object.entries(s.cells)) {
+        if (!isFormula(cell.v)) continue
+        const [r, cc] = k.split(',').map(Number)
+        if (!isError(engine.value(s.name, r, cc)) && (!c.abs || hasAbsoluteRef(cell.v))) n++
+      }
+      const need = c.min || 1
+      return { ok: n >= need, hint: n >= need ? '' : `Cần ít nhất ${need} ô dùng công thức${c.abs ? ' có địa chỉ tuyệt đối ($)' : ''} (không báo lỗi).` }
+    }
+    case 'anyStyle': {
+      const all = wb.sheets.flatMap((s) => Object.values(s.cells).map((x) => x.s || {}))
+      const tests = {
+        b: (s) => s.b, fill: (s) => s.fill, border: (s) => s.bt || s.bb || s.bl || s.br, wrap: (s) => s.wrap,
+        center: (s) => s.align === 'center', percent: (s) => s.nf?.kind === 'percent', decimals: (s) => s.nf?.dec !== undefined, currency: (s) => s.nf?.kind === 'currency' || !!s.nf?.sep,
+      }
+      const names = { b: 'in đậm', fill: 'tô màu nền', border: 'kẻ khung', wrap: 'xuống dòng trong ô', center: 'căn giữa', percent: 'định dạng phần trăm', decimals: 'định dạng số chữ số thập phân', currency: 'định dạng tiền hoặc có dấu phân cách nghìn' }
+      if (c.merge) {
+        const ok = wb.sheets.some((s) => s.merges.length)
+        return { ok, hint: ok ? '' : 'Chưa gộp ô nào (ví dụ gộp ô tiêu đề).' }
+      }
+      const ok = all.some(tests[c.style])
+      return { ok, hint: ok ? '' : `Chưa có ô nào ${names[c.style]}.` }
+    }
+    case 'anyChart': {
+      const ok = wb.sheets.some((s) => s.charts.some((ch) => !c.withTitle || (ch.title || '').trim()))
+      return { ok, hint: ok ? '' : c.withTitle ? 'Cần một biểu đồ có tiêu đề.' : 'Chưa có biểu đồ nào.' }
+    }
+    case 'anyDv': {
+      const ok = wb.sheets.some((s) => s.dv.some((d) => !c.dvType || d.type === c.dvType))
+      return { ok, hint: ok ? '' : 'Chưa dùng Xác thực dữ liệu cho ô nào.' }
+    }
+    case 'anySortFilter': {
+      const ok = wb.sheets.some((s) => s.filter)
+      return { ok, hint: ok ? '' : 'Chưa bật Lọc cho bảng dữ liệu.' }
+    }
     default:
       return { ok: false, hint: `Loại yêu cầu lạ: ${c.type}` }
   }

@@ -45,3 +45,21 @@ Học sinh mở link đó một lần là máy nhớ địa chỉ nộp bài cho
 
 ## Khi sửa mã Apps Script
 Sau khi sửa phải vào **Triển khai → Quản lý các lần triển khai → ✏ → Phiên bản: Phiên bản mới → Triển khai**. Làm theo cách này thì URL giữ nguyên, không phải gửi lại link cho học sinh.
+
+## Phòng máy dùng chung
+- Mở phần mềm, máy hỏi **“Em là ai?”**. Học sinh nhập họ tên và lớp. Bài làm được lưu **riêng cho từng em**, em sau ngồi vào máy không thấy bài của em trước.
+- Hết giờ học: bấm nút tên ở góc trên (👤 …) → **Kết thúc buổi**. Đóng trình duyệt cũng tự quên tên.
+- Chọn **“Chỉ thử, không nộp bài”** thì là Khách: bài thử bị xoá khi phiên khách mới bắt đầu.
+- Bài của học sinh không dùng quá 14 ngày tự xoá khỏi máy.
+
+## Bài vận dụng
+Trong danh sách bài có nhãn **Vận dụng**: học sinh tự chọn nội dung, máy chỉ chấm các kĩ năng (có bảng, có ảnh chữ bao quanh, có dùng SUMIF…). Thầy cô xem nội dung thật trong file các em nộp lên Drive.
+
+## Kiểm tra thực hành
+1. Mở **Tệp → Cài đặt nộp bài (GV)** (trong phần mềm tương ứng: Soạn thảo hoặc Bảng tính).
+2. Ở mục **Link kiểm tra**: chọn bài, nhập số phút → **Sao chép** link và gửi cho lớp.
+3. Khi học sinh mở link kiểm tra:
+   - bắt buộc nhập họ tên, lớp; đồng hồ đếm ngược bắt đầu;
+   - **không có gợi ý**, không có nút Kiểm tra, không xem được điểm;
+   - chỉ nộp **một lần**; **hết giờ máy tự nộp**; tải lại trang vẫn giữ giờ và không nộp lại được.
+4. Trong Sheet, bài kiểm tra có chữ **KIỂM TRA** trong tên bài, tách riêng cột với bài luyện tập.

@@ -73,7 +73,36 @@ export const LESSONS = [
     ],
   },
 
+  {
+    id: 'l4-vd-bai-tho',
+    lop: 4,
+    vanDung: true,
+    bai: 'Bài 11. Chỉnh sửa văn bản',
+    title: 'Bài thơ em yêu',
+    intro: 'Gõ lại một bài thơ (hoặc bài hát) em thích, mỗi câu một dòng. Dòng đầu là tên bài, căn giữa. Gõ xong, đọc lại và sửa hết lỗi chính tả.',
+    start: '',
+    steps: [
+      { text: 'Có tên bài và ít nhất 4 câu thơ (5 dòng)', check: { type: 'minParagraphs', n: 5 } },
+      { text: 'Bài có ít nhất 20 chữ', check: { type: 'minWords', n: 20 } },
+      { text: 'Tên bài được căn giữa', check: { type: 'anyAlign', value: 'center' } },
+    ],
+  },
+
   // ===================== LỚP 5 =====================
+  {
+    id: 'l5-b6-dinh-dang-anh',
+    lop: 5,
+    bai: 'Bài 6. Định dạng kí tự và bố trí hình ảnh trong văn bản',
+    title: 'Trang giới thiệu con vật',
+    intro: 'Định dạng tiêu đề cho nổi bật, rồi chèn một ảnh con vật (tab Chèn → Hình ảnh). Bấm chọn ảnh → tab Ảnh → “Chữ bao quanh” để chữ chạy bên cạnh ảnh.',
+    start: '<p>CON MÈO NHÀ EM</p><p>Nhà em nuôi một chú mèo tam thể tên là Mướp. Bộ lông của Mướp mềm mượt, có ba màu trắng, đen và vàng. Đôi mắt Mướp tròn xoe, ban đêm sáng lấp lánh. Mướp rất giỏi bắt chuột nên cả nhà ai cũng quý.</p>',
+    steps: [
+      { text: 'Tiêu đề in đậm, màu đỏ, cỡ chữ 18', check: { type: 'format', text: 'CON MÈO NHÀ EM', bold: true, color: 'đỏ', fontSize: 18 } },
+      { text: 'Tiêu đề căn giữa', check: { type: 'align', text: 'CON MÈO NHÀ EM', value: 'center' } },
+      { text: 'Tên “Mướp” lần đầu được in nghiêng', check: { type: 'format', text: 'tên là Mướp', italic: true } },
+      { text: 'Có ảnh, đặt kiểu “Chữ bao quanh”', check: { type: 'image', wrap: 'any' } },
+    ],
+  },
   {
     id: 'l5-b7-chinh-sua',
     lop: 5,
@@ -102,6 +131,23 @@ export const LESSONS = [
       { text: 'Dòng tiêu đề căn giữa', check: { type: 'align', text: 'CHÚC MỪNG NGÀY NHÀ GIÁO', value: 'center' } },
       { text: 'Dòng tiêu đề in đậm, màu đỏ', check: { type: 'format', text: 'CHÚC MỪNG NGÀY NHÀ GIÁO VIỆT NAM 20-11', bold: true, color: 'đỏ' } },
       { text: 'Lời chúc in nghiêng', check: { type: 'format', text: 'Em kính chúc thầy cô luôn mạnh khoẻ và hạnh phúc!', italic: true } },
+    ],
+  },
+
+  {
+    id: 'l5-vd-thiep',
+    lop: 5,
+    vanDung: true,
+    bai: 'Bài 7. Thực hành soạn thảo văn bản',
+    title: 'Thiệp sinh nhật tặng bạn',
+    intro: 'Tự làm một tấm thiệp chúc mừng sinh nhật bạn thân: có lời chúc, có hình ảnh và trang trí chữ thật đẹp.',
+    start: '',
+    steps: [
+      { text: 'Có ít nhất 3 dòng chữ', check: { type: 'minParagraphs', n: 3 } },
+      { text: 'Có ít nhất 1 hình ảnh', check: { type: 'image', min: 1 } },
+      { text: 'Có dòng căn giữa', check: { type: 'anyAlign', value: 'center' } },
+      { text: 'Có chữ in đậm', check: { type: 'anyFormat', bold: true } },
+      { text: 'Có chữ được tô màu', check: { type: 'anyFormat', color: true } },
     ],
   },
 
@@ -203,6 +249,55 @@ export const LESSONS = [
       { text: 'Ba bước rửa tay: đánh số', check: { type: 'list', texts: ['Làm ướt tay', 'Xoa xà phòng', 'Rửa sạch và lau khô'], kind: 'ordered' } },
     ],
   },
+  {
+    id: 'l6-b14-so-luu-niem',
+    lop: 6,
+    vanDung: true,
+    bai: 'Bài 14. Thực hành tổng hợp: Hoàn thiện sổ lưu niệm',
+    title: 'Trang sổ lưu niệm của em',
+    intro: 'Làm một trang cho sổ lưu niệm của lớp: giới thiệu bản thân, có bảng thông tin và danh sách những điều em thích. Dùng các kĩ năng đã học ở Bài 11–13.',
+    start: '',
+    steps: [
+      { text: 'Có tiêu đề căn giữa, cỡ chữ từ 16 trở lên', check: { type: 'anyFormat', fontSizeMin: 16 } },
+      { text: 'Có ít nhất một đoạn căn giữa', check: { type: 'anyAlign', value: 'center' } },
+      { text: 'Có đoạn văn từ 30 chữ trở lên (tổng cả trang)', check: { type: 'minWords', n: 30 } },
+      { text: 'Có đoạn thụt dòng đầu', check: { type: 'anyPara', indentFirst: true } },
+      { text: 'Có bảng thông tin ít nhất 3 hàng × 2 cột, điền đủ', check: { type: 'tableMin', rows: 3, cols: 2, filled: true } },
+      { text: 'Có danh sách liệt kê ít nhất 3 mục', check: { type: 'anyList', minItems: 3 } },
+    ],
+  },
+  {
+    id: 'l6-vd-gioi-thieu',
+    lop: 6,
+    vanDung: true,
+    bai: 'Bài 11. Định dạng văn bản',
+    title: 'Giới thiệu về em',
+    intro: 'Viết đoạn văn giới thiệu bản thân (tên, sở thích, ước mơ). Trình bày như một văn bản thật: tiêu đề nổi bật, đoạn văn căn đều, thụt đầu dòng.',
+    start: '',
+    steps: [
+      { text: 'Có tiêu đề in đậm, cỡ từ 16 trở lên', check: { type: 'anyFormat', bold: true, fontSizeMin: 16 } },
+      { text: 'Có ít nhất 3 đoạn văn', check: { type: 'minParagraphs', n: 3, minChars: 10 } },
+      { text: 'Có đoạn căn đều hai bên', check: { type: 'anyAlign', value: 'justify' } },
+      { text: 'Có đoạn thụt dòng đầu', check: { type: 'anyPara', indentFirst: true } },
+      { text: 'Có chữ in nghiêng hoặc gạch chân để nhấn mạnh', check: { type: 'anyFormat', italic: true } },
+    ],
+  },
+  {
+    id: 'l6-vd-tkb',
+    lop: 6,
+    vanDung: true,
+    bai: 'Bài 12. Trình bày thông tin ở dạng bảng',
+    title: 'Thời khoá biểu của em',
+    intro: 'Làm thời khoá biểu buổi sáng các ngày trong tuần của lớp em. Hàng đầu là các thứ, cột đầu là tiết. Có thể gộp ô cho tiêu đề.',
+    start: '',
+    steps: [
+      { text: 'Có bảng ít nhất 6 hàng × 6 cột', check: { type: 'tableMin', rows: 6, cols: 6 } },
+      { text: 'Điền gần đủ các ô (để trống tối đa 3 ô)', check: { type: 'tableMin', rows: 6, cols: 6, filled: true, allowEmpty: 3 } },
+      { text: 'Có tiêu đề căn giữa phía trên bảng', check: { type: 'anyAlign', value: 'center' } },
+      { text: 'Hướng trang nằm ngang', check: { type: 'page', orientation: 'landscape' } },
+    ],
+  },
+
   // ===================== LỚP 8 (Tự chọn 1) =====================
   {
     id: 'l8-8a-danh-sach',
@@ -265,6 +360,22 @@ export const LESSONS = [
       { text: 'Chân trang có số trang', check: { type: 'footer', pageNumber: true } },
       { text: 'Số trang nằm bên phải', check: { type: 'footer', pageNumber: true, align: 'right' } },
       { text: 'Bật “Trang đầu khác”', check: { type: 'titlePage', value: true } },
+    ],
+  },
+  {
+    id: 'l8-vd-ban-tin',
+    lop: 8,
+    vanDung: true,
+    bai: 'Bài 8a, 9a. Danh sách, hình ảnh, đầu trang – chân trang',
+    title: 'Bản tin lớp em',
+    intro: 'Làm một bản tin về hoạt động gần đây của lớp: có ảnh minh hoạ (chữ bao quanh), danh sách các hoạt động, đầu trang ghi tên bản tin và chân trang có số trang.',
+    start: '',
+    steps: [
+      { text: 'Có ít nhất 50 chữ', check: { type: 'minWords', n: 50 } },
+      { text: 'Có danh sách liệt kê ít nhất 3 mục', check: { type: 'anyList', minItems: 3 } },
+      { text: 'Có ảnh đặt kiểu “Chữ bao quanh”', check: { type: 'image', wrap: 'any' } },
+      { text: 'Có đầu trang', check: { type: 'header' } },
+      { text: 'Chân trang có số trang', check: { type: 'footer', pageNumber: true } },
     ],
   },
 ]

@@ -131,6 +131,38 @@ export const LESSONS = [
     ],
   },
 
+  {
+    id: 'l7-vd-chi-tieu',
+    lop: 7,
+    vanDung: true,
+    bai: 'Bài 7, 8. Tính toán trên bảng tính',
+    title: 'Sổ chi tiêu một tuần của em',
+    intro: 'Lập bảng ghi các khoản em tiêu trong một tuần (ngày, nội dung, số tiền). Cuối bảng tính tổng tiền và khoản tiêu nhiều nhất bằng hàm.',
+    steps: [
+      { text: 'Có ít nhất 15 ô có dữ liệu', check: { type: 'minFilled', n: 15 } },
+      { text: 'Tính tổng bằng hàm SUM', check: { type: 'usesFunc', func: 'SUM' } },
+      { text: 'Tìm khoản lớn nhất bằng hàm MAX', check: { type: 'usesFunc', func: 'MAX' } },
+      { text: 'Hàng tiêu đề in đậm', check: { type: 'anyStyle', style: 'b' } },
+      { text: 'Có kẻ khung cho bảng', check: { type: 'anyStyle', style: 'border' } },
+    ],
+  },
+  {
+    id: 'l7-vd-bang-diem-to',
+    lop: 7,
+    vanDung: true,
+    bai: 'Bài 8, 9. Hàm và trình bày bảng tính',
+    title: 'Bảng điểm tổ em',
+    intro: 'Lập bảng điểm 3 môn của các bạn trong tổ (ít nhất 4 bạn). Tính điểm trung bình từng bạn, tìm điểm cao nhất, thấp nhất. Trình bày bảng thật đẹp.',
+    steps: [
+      { text: 'Có ít nhất 20 ô có dữ liệu', check: { type: 'minFilled', n: 20 } },
+      { text: 'Tính điểm trung bình (AVERAGE) cho ít nhất 4 bạn', check: { type: 'usesFunc', func: 'AVERAGE', min: 4 } },
+      { text: 'Có dùng MAX hoặc MIN', check: { type: 'usesFunc', func: ['MAX', 'MIN'] } },
+      { text: 'Gộp ô cho tiêu đề bảng', check: { type: 'anyStyle', merge: true } },
+      { text: 'Có tô màu nền', check: { type: 'anyStyle', style: 'fill' } },
+      { text: 'Điểm TB có định dạng số chữ số thập phân', check: { type: 'anyStyle', style: 'decimals' } },
+    ],
+  },
+
   // ===================== LỚP 8 =====================
   {
     id: 'l8-b5-tuyet-doi',
@@ -198,6 +230,22 @@ export const LESSONS = [
     ],
   },
 
+  {
+    id: 'l8-vd-khao-sat',
+    lop: 8,
+    vanDung: true,
+    bai: 'Bài 5, 6, 7. Giải quyết bài toán thực tế',
+    title: 'Khảo sát sở thích của lớp',
+    intro: 'Hỏi các bạn trong lớp về một chủ đề (môn thể thao, món ăn, cách đến trường…). Ghi số bạn chọn từng mục, tính tỉ lệ % (dùng địa chỉ tuyệt đối), sắp xếp hoặc lọc, rồi vẽ biểu đồ.',
+    steps: [
+      { text: 'Có ít nhất 5 mục khảo sát (10 ô dữ liệu)', check: { type: 'minFilled', n: 10 } },
+      { text: 'Tính tổng số bạn bằng SUM', check: { type: 'usesFunc', func: 'SUM' } },
+      { text: 'Tính tỉ lệ bằng công thức có địa chỉ tuyệt đối', check: { type: 'anyFormula', abs: true, min: 3 } },
+      { text: 'Tỉ lệ có định dạng phần trăm', check: { type: 'anyStyle', style: 'percent' } },
+      { text: 'Có biểu đồ có tiêu đề', check: { type: 'anyChart', withTitle: true } },
+    ],
+  },
+
   // ===================== LỚP 9 =====================
   {
     id: 'l9-9a-xac-thuc',
@@ -248,6 +296,22 @@ export const LESSONS = [
     steps: [
       { text: 'C2:C7 dùng IF: “Đạt” / “Chưa đạt”', check: { type: 'formula', range: 'C2:C7', func: 'IF', equals: ['Đạt', 'Chưa đạt', 'Đạt', 'Đạt', 'Đạt', 'Chưa đạt'] } },
       { text: 'D2:D7 xếp loại bằng IF lồng nhau', check: { type: 'formula', range: 'D2:D7', func: 'IF', equals: ['Giỏi', 'Yếu', 'Khá', 'Trung bình', 'Giỏi', 'Yếu'] } },
+    ],
+  },
+  {
+    id: 'l9-vd-quy-lop',
+    lop: 9,
+    vanDung: true,
+    bai: 'Bài 9a – 12a. Hàm có điều kiện',
+    title: 'Quản lí quỹ lớp',
+    intro: 'Lập sổ thu chi quỹ lớp của một tháng (ít nhất 8 lần thu/chi). Dùng Xác thực dữ liệu cho cột Khoản, đếm số lần và tính tổng thu, chi bằng COUNTIF, SUMIF; dùng IF để ghi “Còn quỹ” hay “Âm quỹ”.',
+    steps: [
+      { text: 'Có ít nhất 30 ô có dữ liệu', check: { type: 'minFilled', n: 30 } },
+      { text: 'Có dùng Xác thực dữ liệu', check: { type: 'anyDv' } },
+      { text: 'Đếm số lần thu/chi bằng COUNTIF', check: { type: 'usesFunc', func: 'COUNTIF' } },
+      { text: 'Tính tổng thu/chi bằng SUMIF', check: { type: 'usesFunc', func: 'SUMIF', min: 2 } },
+      { text: 'Có dùng hàm IF', check: { type: 'usesFunc', func: 'IF' } },
+      { text: 'Số tiền định dạng tiền hoặc có dấu phân cách nghìn', check: { type: 'anyStyle', style: 'currency' } },
     ],
   },
 ]

@@ -2,7 +2,6 @@
 // Địa chỉ nộp bài lấy từ đường link giáo viên chia sẻ (?nop=...&khoa=...), nhớ lại trong trình duyệt.
 
 const KEY_CFG = 'stt:submitCfg'
-const KEY_STUDENT = 'stt:student'
 
 function read(k) { try { return JSON.parse(localStorage.getItem(k)) } catch { return null } }
 function write(k, v) { try { localStorage.setItem(k, JSON.stringify(v)) } catch { /* bị chặn */ } }
@@ -27,8 +26,8 @@ export function studentLink(cfg) {
   return u.toString()
 }
 
-export const getStudent = () => read(KEY_STUDENT)
-export const setStudent = (s) => write(KEY_STUDENT, s)
+// Tên học sinh: chỉ nhớ trong phiên (xem session.js) để máy dùng chung không nộp nhầm tên
+export { namedUser as getStudent } from './session.js'
 
 function blobToBase64(blob) {
   return new Promise((resolve, reject) => {
