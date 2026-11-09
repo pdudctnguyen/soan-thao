@@ -1,6 +1,7 @@
 # Cài đặt nộp bài (làm một lần, khoảng 5 phút)
 
-> Dùng chung cho cả **Soạn thảo** và **Bảng tính**: cùng một Google Sheet, cùng một đường link nộp bài.
+> Dùng chung cho cả **Soạn thảo**, **Bảng tính** và **Trình chiếu**: cùng một Google Sheet, cùng một đường link nộp bài.
+> **Đã cài từ trước khi có Trình chiếu?** Dán lại `apps-script/Code.gs` mới (giữ dòng `const KHOA = ...` của thầy cô) rồi làm mục *Khi sửa mã Apps Script* ở cuối trang — bản cũ sẽ lưu bài trình chiếu sai đuôi (.docx).
 > **Đã cài từ trước khi có Bảng tính?** Dán lại `apps-script/Code.gs` mới rồi làm mục *Khi sửa mã Apps Script* ở cuối trang — bản cũ sẽ lưu tệp bảng tính sai đuôi.
 
 Bài học sinh nộp sẽ vào **Google Sheet của thầy cô**: mỗi lần nộp thêm một dòng điểm, file bài làm (.docx hoặc .xlsx) được lưu vào Google Drive.
@@ -36,12 +37,12 @@ Bài học sinh nộp sẽ vào **Google Sheet của thầy cô**: mỗi lần n
 3. Bấm **Kiểm tra kết nối**, phải thấy ✓.
 4. Bấm **Sao chép** đường link ở dưới và gửi cho học sinh (qua Zalo, Classroom hoặc ghi lên bảng bằng mã QR).
 
-Học sinh mở link đó một lần là máy nhớ địa chỉ nộp bài cho **cả hai phần mềm** (chuyển qua lại bằng nút **↗ Bảng tính** / **↗ Soạn thảo** ở góc trên). Lần đầu nộp, máy hỏi họ tên và lớp.
+Học sinh mở link đó một lần là máy nhớ địa chỉ nộp bài cho **cả ba phần mềm** (chuyển qua lại bằng các nút **↗ Soạn thảo** / **↗ Bảng tính** / **↗ Trình chiếu** ở góc trên). Lần đầu nộp, máy hỏi họ tên và lớp.
 
 ## Xem kết quả
 - **Kết quả**: mọi lần nộp, gồm thời gian, lớp, họ tên, bài, số yêu cầu đạt, chi tiết từng ý và link file bài làm.
 - **Bảng điểm**: mỗi học sinh một dòng, mỗi bài một cột, lấy **điểm cao nhất** (%) nếu em nộp nhiều lần.
-- File bài làm (.docx, .xlsx) nằm trong Drive, thư mục **Bài nộp Soạn thảo / <Lớp>**. Bài bảng tính có chữ “Bảng tính” trong tên bài.
+- File bài làm (.docx, .xlsx, .pptx) nằm trong Drive, thư mục **Bài nộp Soạn thảo / <Lớp>**. Bài bảng tính có chữ “Bảng tính”, bài trình chiếu có chữ “Trình chiếu” trong tên bài.
 
 ## Khi sửa mã Apps Script
 Sau khi sửa phải vào **Triển khai → Quản lý các lần triển khai → ✏ → Phiên bản: Phiên bản mới → Triển khai**. Làm theo cách này thì URL giữ nguyên, không phải gửi lại link cho học sinh.
@@ -56,7 +57,7 @@ Sau khi sửa phải vào **Triển khai → Quản lý các lần triển khai 
 Trong danh sách bài có nhãn **Vận dụng**: học sinh tự chọn nội dung, máy chỉ chấm các kĩ năng (có bảng, có ảnh chữ bao quanh, có dùng SUMIF…). Thầy cô xem nội dung thật trong file các em nộp lên Drive.
 
 ## Kiểm tra thực hành
-1. Mở **Tệp → Cài đặt nộp bài (GV)** (trong phần mềm tương ứng: Soạn thảo hoặc Bảng tính).
+1. Mở **Tệp → Cài đặt nộp bài (GV)** (trong phần mềm tương ứng: Soạn thảo, Bảng tính hoặc Trình chiếu).
 2. Ở mục **Link kiểm tra**: chọn bài, nhập số phút → **Sao chép** link và gửi cho lớp.
 3. Khi học sinh mở link kiểm tra:
    - bắt buộc nhập họ tên, lớp; đồng hồ đếm ngược bắt đầu;

@@ -29,6 +29,9 @@ export function studentLink(cfg) {
 // Tên học sinh: chỉ nhớ trong phiên (xem session.js) để máy dùng chung không nộp nhầm tên
 export { namedUser as getStudent } from './session.js'
 
+// bỏ thẻ HTML trong đề (<b>…) trước khi ghi vào trang tính
+const plain = (html) => String(html).replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ')
+
 function blobToBase64(blob) {
   return new Promise((resolve, reject) => {
     const r = new FileReader()
@@ -50,7 +53,7 @@ export async function submit(cfg, student, { lesson, results, docxBlob, fileName
     tenBai: lesson ? `Lớp ${lesson.lop} · ${lesson.bai} · ${lesson.title}` : 'Bài tự do',
     dat,
     tong: results ? results.length : null,
-    chiTiet: results ? lesson.steps.map((s, i) => `${results[i].ok ? '✓' : '✗'} ${s.text}`).join('\n') : '',
+    chiTiet: results ? lesson.steps.map((s, i) => `${results[i].ok ? '✓' : '✗'} ${plain(s.text)}`).join('\n') : '',
     tenTep: fileName,
     duoiTep: ext,
     tep: docxBlob ? await blobToBase64(docxBlob) : '',

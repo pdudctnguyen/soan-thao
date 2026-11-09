@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trình chiếu</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='4' width='20' height='14' rx='2' fill='%23b7472a'/%3E%3Cpath d='M7 15l3-4 2 2 3-4 3 6z' fill='white'/%3E%3Cpath d='M12 18v3M8 21h8' stroke='%23b7472a' stroke-width='1.6'/%3E%3C/svg%3E" />
+</head>
+<body class="slide-app">
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="2" y="4" width="20" height="14" rx="2" fill="currentColor" opacity=".25"/><path d="M7 15l3-4 2 2 3-4 3 6z" fill="currentColor"/><path d="M12 18v3M8 21h8" stroke="currentColor" stroke-width="1.6"/></svg>
+      <span>Trình chiếu</span>
+    </div>
+    <input id="fileName" class="filename" value="Bài trình chiếu của em" aria-label="Tên tệp" />
+    <span id="saveState" class="save-state">Đã lưu tạm</span>
+    <div class="spacer"></div>
+    <a class="app-switch" href="../" title="Mở phần mềm Soạn thảo văn bản">↗ Soạn thảo</a>
+    <a class="app-switch" href="../bang-tinh/" title="Mở phần mềm Bảng tính">↗ Bảng tính</a>
+    <label class="level">Giao diện
+      <select id="level">
+        <option value="3">Lớp 3</option>
+        <option value="4">Lớp 4</option>
+        <option value="7" selected>Lớp 7</option>
+        <option value="8">Lớp 8</option>
+        <option value="99">Đầy đủ</option>
+      </select>
+    </label>
+    <button id="toggleLessons" class="btn-primary">Bài tập</button>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button data-tab="file">Tệp</button>
+    <button data-tab="home" class="active">Trang chủ</button>
+    <button data-tab="insert">Chèn</button>
+    <button data-tab="design">Thiết kế</button>
+    <button data-tab="trans" data-lop="4">Chuyển trang</button>
+    <button data-tab="anim" data-lop="7">Hiệu ứng</button>
+    <button data-tab="show">Trình chiếu</button>
+    <button data-tab="format" class="ctx hidden" id="formatTab">Định dạng</button>
+  </nav>
+
+  <section class="ribbon">
+    <!-- TỆP -->
+    <div class="panel" data-panel="file">
+      <div class="group"><div class="row">
+        <button class="big" data-act="new"><i class="ic">＋</i>Bài mới</button>
+        <button class="big" data-act="open"><i class="ic">📂</i>Mở tệp .pptx</button>
+        <button class="big" data-act="save"><i class="ic">💾</i>Lưu về máy (.pptx)</button>
+      </div><div class="label">Tệp</div></div>
+      <div class="group"><div class="row">
+        <button class="big" data-act="submit"><i class="ic">📤</i>Nộp bài</button>
+        <button class="big" data-act="student"><i class="ic">👤</i>Tên &amp; lớp</button>
+        <button class="big" data-act="submitSetup"><i class="ic">⚙</i>Cài đặt nộp bài (GV)</button>
+      </div><div class="label">Nộp bài cho thầy cô</div></div>
+      <input type="file" id="openInput" accept=".pptx" hidden />
+    </div>
+
+    <!-- TRANG CHỦ -->
+    <div class="panel active" data-panel="home">
+      <div class="group">
+        <div class="row">
+          <button data-act="undo" title="Hoàn tác (Ctrl+Z)" class="undo">↶</button>
+          <button data-act="redo" title="Làm lại (Ctrl+Y)" class="undo">↷</button>
+        </div>
+        <div class="label">Hoàn tác</div>
+      </div>
+      <div class="group">
+        <div class="row">
+          <button data-act="paste" title="Dán (Ctrl+V)" class="tall"><i class="ic">📋</i>Dán</button>
+          <div class="col">
+            <button data-act="cut" title="Cắt (Ctrl+X)">✂ Cắt</button>
+            <button data-act="copy" title="Sao chép (Ctrl+C)">⧉ Sao chép</button>
+          </div>
+        </div>
+        <div class="label">Bộ nhớ tạm</div>
+      </div>
+      <div class="group">
+        <div class="row">
+          <span class="split split-big">
+            <button class="big" data-act="newSlide" title="Thêm trang chiếu mới (Ctrl+M)"><i class="ic">▭＋</i>Trang mới</button>
+            <button data-pop="layoutPop" class="caret" title="Chọn bố cục cho trang mới">▾</button>
+          </span>
+          <div class="col">
+            <button data-pop="relayoutPop" title="Đổi bố cục trang đang chọn">▦ Bố cục ▾</button>
+            <button data-act="dupSlide" title="Nhân đôi trang (Ctrl+D)">⧉ Nhân đôi</button>
+            <button data-act="delSlide" title="Xoá trang đang chọn">🗑 Xoá trang</button>
+          </div>
+        </div>
+        <div class="label">Trang chiếu</div>
+      </div>
+      <div class="group">
+        <div class="row">
+          <select id="fontFamily" title="Phông chữ" class="w-font"></select>
+          <input id="fontSize" title="Cỡ chữ" class="w-size tc-size" list="sizeList" autocomplete="off" />
+          <datalist id="sizeList"></datalist>
+          <button data-act="grow" title="Tăng cỡ chữ">A<sup>+</sup></button>
+          <button data-act="shrink" title="Giảm cỡ chữ">A<sup>−</sup></button>
+        </div>
+        <div class="row">
+          <button data-mark="bold" title="In đậm (Ctrl+B)"><b>B</b></button>
+          <button data-mark="italic" title="In nghiêng (Ctrl+I)"><i class="serif">I</i></button>
+          <button data-mark="underline" title="Gạch chân (Ctrl+U)"><u>U</u></button>
+          <button data-mark="strike" title="Gạch ngang"><s>ab</s></button>
+          <span class="split">
+            <button data-act="color" title="Màu chữ"><span class="a-color">A<span class="bar" id="colorBar"></span></span></button>
+            <button data-pop="colorPop" class="caret" title="Chọn màu chữ">▾</button>
+          </span>
+          <button data-act="clearFormat" title="Xoá định dạng">A⌫</button>
+        </div>
+        <div class="label">Phông chữ</div>
+      </div>
+      <div class="group">
+        <div class="row">
+          <span class="split">
+            <button data-act="bullet" title="Gạch đầu dòng" id="bulletBtn">• ≡</button>
+            <button data-pop="bulletPop" class="caret" title="Chọn kiểu gạch đầu dòng" data-lop="7">▾</button>
+          </span>
+          <span class="split">
+            <button data-act="number" title="Đánh số thứ tự" id="numberBtn">1. ≡</button>
+            <button data-pop="numberPop" class="caret" title="Chọn kiểu số" data-lop="7">▾</button>
+          </span>
+          <button data-act="levelDown" title="Giảm cấp (Shift+Tab)">⇤</button>
+          <button data-act="levelUp" title="Tăng cấp (Tab)">⇥</button>
+        </div>
+        <div class="row">
+          <button data-align="left" title="Căn trái"><svg viewBox="0 0 20 20"><path d="M3 4h14M3 8h9M3 12h14M3 16h9"/></svg></button>
+          <button data-align="center" title="Căn giữa"><svg viewBox="0 0 20 20"><path d="M3 4h14M5.5 8h9M3 12h14M5.5 16h9"/></svg></button>
+          <button data-align="right" title="Căn phải"><svg viewBox="0 0 20 20"><path d="M3 4h14M8 8h9M3 12h14M8 16h9"/></svg></button>
+          <button data-align="justify" title="Căn đều hai bên"><svg viewBox="0 0 20 20"><path d="M3 4h14M3 8h14M3 12h14M3 16h14"/></svg></button>
+          <span class="split">
+            <button data-pop="valignPop" title="Căn chữ theo chiều dọc">⇕ ▾</button>
+          </span>
+        </div>
+        <div class="label">Đoạn văn</div>
+      </div>
+      <div class="group">
+        <div class="row">
+          <button class="big" data-pop="shapePop"><i class="ic">◯▢</i>Hình ▾</button>
+          <button class="big" data-pop="arrangePop"><i class="ic">⧉</i>Sắp xếp ▾</button>
+        </div>
+        <div class="label">Vẽ</div>
+      </div>
+    </div>
+
+    <!-- CHÈN -->
+    <div class="panel" data-panel="insert">
+      <div class="group">
+        <div class="row">
+          <span class="split split-big">
+            <button class="big" data-act="newSlide"><i class="ic">▭＋</i>Trang mới</button>
+            <button data-pop="layoutPop" class="caret" title="Chọn bố cục">▾</button>
+          </span>
+        </div>
+        <div class="label">Trang chiếu</div>
+      </div>
+      <div class="group">
+        <div class="row">
+          <button class="big" data-act="image"><i class="ic">🖼</i>Ảnh từ<br>máy tính</button>
+          <button class="big" data-pop="clipPop"><i class="ic">🏫</i>Ảnh mẫu ▾</button>
+          <button class="big" data-pop="shapePop"><i class="ic">◯▢</i>Hình<br>dạng ▾</button>
+        </div>
+        <div class="label">Hình minh hoạ</div>
+      </div>
+      <div class="group">
+        <div class="row">
+          <button class="big" data-act="textbox"><i class="ic">🅰</i>Hộp<br>văn bản</button>
+          <button class="big" data-act="headerFooter" data-lop="8"><i class="ic">▤</i>Đầu trang &amp;<br>chân trang</button>
+          <button class="big" data-act="slideNumber" data-lop="8"><i class="ic">#</i>Số trang</button>
+          <button class="big" data-act="dateTime" data-lop="8"><i class="ic">📅</i>Ngày giờ</button>
+        </div>
+        <div class="label">Văn bản</div>
+      </div>
+      <div class="group" data-lop="8">
+        <div class="row">
+          <button class="big" data-act="link"><i class="ic">🔗</i>Liên kết</button>
+        </div>
+        <div class="label">Liên kết</div>
+      </div>
+      <input type="file" id="imageInput" accept="image/*" hidden />
+    </div>
+
+    <!-- THIẾT KẾ -->
+    <div class="panel" data-panel="design">
+      <div class="group">
+        <div class="row theme-gallery" id="themeGallery"></div>
+        <div class="label">Bản mẫu (Themes) — áp dụng cho cả bài</div>
+      </div>
+      <div class="group">
+        <div class="row">
+          <button class="big" data-pop="bgPop"><i class="ic">🎨</i>Màu nền ▾</button>
+        </div>
+        <div class="label">Tuỳ chỉnh</div>
+      </div>
+    </div>
+
+    <!-- CHUYỂN TRANG -->
+    <div class="panel" data-panel="trans">
+      <div class="group">
+        <div class="row gallery" id="transGallery"></div>
+        <div class="label">Hiệu ứng chuyển sang trang này</div>
+      </div>
+      <div class="group">
+        <div class="row">
+          <button class="big" data-pop="dirPop" id="dirBtn"><i class="ic">⇅</i>Tuỳ chọn<br>hiệu ứng ▾</button>
+        </div>
+        <div class="label">Hướng</div>
+      </div>
+      <div class="group">
+        <div class="row"><label class="chk">Thời gian <input type="number" id="transDur" min="0.25" max="10" step="0.25" class="num-in" /> giây</label></div>
+        <div class="row"><label class="chk"><input type="checkbox" id="transAdvOn" /> Tự chuyển sau <input type="number" id="transAdv" min="1" max="600" step="1" class="num-in" /> giây</label></div>
+        <div class="label">Thời gian</div>
+      </div>
+      <div class="group">
+        <div class="row">
+          <button class="big" data-act="transAll"><i class="ic">⧉</i>Áp dụng cho<br>tất cả trang</button>
+          <button class="big" data-act="transPreview"><i class="ic">▶</i>Xem trước</button>
+        </div>
+        <div class="label">Áp dụng</div>
+      </div>
+    </div>
+
+    <!-- HIỆU ỨNG ĐỐI TƯỢNG -->
+    <div class="panel" data-panel="anim">
+      <div class="group">
+        <div class="row gallery" id="animGallery"></div>
+        <div class="label">Hiệu ứng xuất hiện cho đối tượng đang chọn</div>
+      </div>
+      <div class="group">
+        <div class="row"><label class="chk">Bắt đầu <select id="animStart"></select></label></div>
+        <div class="row"><label class="chk">Thời gian <input type="number" id="animDur" min="0.25" max="10" step="0.25" class="num-in" /> giây</label></div>
+        <div class="label">Thời điểm</div>
+      </div>
+      <div class="group">
+        <div class="row">
+          <div class="col">
+            <button data-act="animEarlier" title="Cho hiệu ứng chạy sớm hơn">▲ Sớm hơn</button>
+            <button data-act="animLater" title="Cho hiệu ứng chạy muộn hơn">▼ Muộn hơn</button>
+          </div>
+          <button class="big" data-act="animPreview"><i class="ic">▶</i>Xem trước</button>
+        </div>
+        <div class="label">Thứ tự</div>
+      </div>
+    </div>
+
+    <!-- TRÌNH CHIẾU -->
+    <div class="panel" data-panel="show">
+      <div class="group">
+        <div class="row">
+          <button class="big" data-act="showStart"><i class="ic">▶</i>Từ đầu<br><small>F5</small></button>
+          <button class="big" data-act="showHere"><i class="ic">⏵</i>Từ trang<br>hiện tại</button>
+        </div>
+        <div class="label">Bắt đầu trình chiếu</div>
+      </div>
+      <div class="group">
+        <div class="row"><span class="tip-text">Khi trình chiếu: bấm chuột, phím → hoặc Space để sang bước tiếp; phím ← để quay lại; Esc để thoát.</span></div>
+        <div class="label">Điều khiển</div>
+      </div>
+    </div>
+
+    <!-- ĐỊNH DẠNG (hình / ảnh) -->
+    <div class="panel" data-panel="format">
+      <div class="group">
+        <div class="row">
+          <button class="big" data-pop="fillPop" id="fillBtn"><i class="ic">🪣</i>Tô màu ▾</button>
+          <button class="big" data-pop="linePop"><i class="ic">▢</i><span id="lineLabel">Đường viền</span> ▾</button>
+        </div>
+        <div class="label" id="styleLabel">Kiểu hình</div>
+      </div>
+      <div class="group">
+        <div class="row">
+          <div class="col">
+            <button data-arr="forward">⬆ Đưa lên một lớp</button>
+            <button data-arr="backward">⬇ Đưa xuống một lớp</button>
+          </div>
+          <div class="col">
+            <button data-arr="front">⇈ Lên trên cùng</button>
+            <button data-arr="back">⇊ Xuống dưới cùng</button>
+          </div>
+        </div>
+        <div class="label">Sắp xếp (lớp)</div>
+      </div>
+      <div class="group">
+        <div class="row"><label class="chk">Cao <input type="number" id="objH" min="0.1" step="0.1" class="num-in" /> cm</label></div>
+        <div class="row"><label class="chk">Rộng <input type="number" id="objW" min="0.1" step="0.1" class="num-in" /> cm</label></div>
+        <div class="label">Kích thước</div>
+      </div>
+      <div class="group">
+        <div class="row">
+          <button class="big" data-act="link" data-lop="8"><i class="ic">🔗</i>Liên kết</button>
+          <button class="big close-hf" data-act="deleteObj"><i class="ic">🗑</i>Xoá</button>
+        </div>
+        <div class="label">Khác</div>
+      </div>
+    </div>
+  </section>
+
+  <main class="workspace tc-work">
+    <aside class="thumbs" id="thumbs" tabindex="0" aria-label="Danh sách trang chiếu"></aside>
+    <div class="stage" id="stage">
+      <div class="slide-holder" id="holder"></div>
+    </div>
+    <aside class="lessons hidden" id="lessons">
+      <div class="lessons-head">
+        <strong>Bài tập thực hành</strong>
+        <button class="icon" id="closeLessons" title="Đóng">✕</button>
+      </div>
+      <div id="lessonList" class="lesson-list"></div>
+      <div id="lessonView" class="lesson-view hidden"></div>
+    </aside>
+  </main>
+
+  <footer class="statusbar">
+    <span id="slideInfo">Trang 1/1</span>
+    <span class="hint" id="hintText">Bấm vào khung để gõ chữ. Kéo viền khung để di chuyển.</span>
+    <span class="spacer"></span>
+    <button class="status-btn" data-act="showHere" title="Trình chiếu từ trang hiện tại">▶ Trình chiếu</button>
+  </footer>
+
+  <!-- POPOVERS -->
+  <div class="pop" id="colorPop"></div>
+  <div class="pop" id="fillPop"></div>
+  <div class="pop" id="linePop"></div>
+  <div class="pop" id="bgPop"></div>
+  <div class="pop list" id="layoutPop"></div>
+  <div class="pop list" id="relayoutPop"></div>
+  <div class="pop list" id="shapePop"></div>
+  <div class="pop list" id="arrangePop">
+    <button data-arr="forward"><b>⬆ Đưa lên một lớp</b><small>Bring Forward</small></button>
+    <button data-arr="backward"><b>⬇ Đưa xuống một lớp</b><small>Send Backward</small></button>
+    <button data-arr="front"><b>⇈ Đưa lên trên cùng</b><small>Bring to Front</small></button>
+    <button data-arr="back"><b>⇊ Đưa xuống dưới cùng</b><small>Send to Back</small></button>
+  </div>
+  <div class="pop list" id="valignPop">
+    <button data-valign="top"><b>⊤ Căn trên</b></button>
+    <button data-valign="middle"><b>≡ Căn giữa</b></button>
+    <button data-valign="bottom"><b>⊥ Căn dưới</b></button>
+  </div>
+  <div class="pop" id="bulletPop"><div class="pop-title">Kiểu gạch đầu dòng</div><div class="list-styles" id="bulletStyles"></div></div>
+  <div class="pop" id="numberPop"><div class="pop-title">Kiểu đánh số</div><div class="list-styles" id="numberStyles"></div></div>
+  <div class="pop list" id="dirPop"></div>
+  <div class="pop list" id="ctxMenu"></div>
+  <div class="pop" id="clipPop"><div class="pop-title">Ảnh có sẵn — bấm để chèn</div><div class="clip-grid" id="clipGrid"></div></div>
+
+  <!-- DIALOGS -->
+  <dialog id="alertDialog">
+    <form method="dialog">
+      <h3 id="alertTitle">Thông báo</h3>
+      <p id="alertText"></p>
+      <div class="dlg-actions"><button value="cancel" id="alertCancel">Huỷ</button><button value="ok" class="btn-primary" id="alertOk">Đồng ý</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="linkDialog">
+    <form method="dialog">
+      <h3>Chèn liên kết</h3>
+      <p class="dlg-note" id="linkNote"></p>
+      <fieldset class="col-fields">
+        <label><span><input type="radio" name="kind" value="url" checked /> Trang web</span> <input name="url" placeholder="https://…" autocomplete="off" /></label>
+        <label><span><input type="radio" name="kind" value="slide" /> Trang chiếu trong bài</span> <select name="slide"></select></label>
+      </fieldset>
+      <div class="dlg-actions"><button value="remove" formnovalidate>Bỏ liên kết</button><button value="cancel" formnovalidate>Huỷ</button><button value="ok" class="btn-primary">Đồng ý</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="hfDialog">
+    <form method="dialog">
+      <h3>Đầu trang &amp; chân trang</h3>
+      <fieldset class="col-fields hf-fields">
+        <label class="left"><input type="checkbox" name="date" /> Ngày và giờ</label>
+        <label class="left sub"><input type="radio" name="dateMode" value="auto" checked /> Tự động cập nhật</label>
+        <label class="left sub"><input type="radio" name="dateMode" value="fixed" /> Cố định <input name="dateText" class="short" /></label>
+        <label class="left"><input type="checkbox" name="num" /> Số trang chiếu</label>
+        <label class="left"><input type="checkbox" name="footer" /> Chân trang <input name="footerText" class="short" placeholder="Nội dung chân trang" /></label>
+        <label class="left"><input type="checkbox" name="notOnTitle" /> Không hiện trên trang tiêu đề</label>
+      </fieldset>
+      <div class="dlg-actions"><button value="cancel" formnovalidate>Huỷ</button><button value="one">Áp dụng</button><button value="all" class="btn-primary">Áp dụng cho tất cả</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="setupDialog">
+    <form method="dialog">
+      <h3>Cài đặt nộp bài (dành cho giáo viên)</h3>
+      <p class="dlg-note">Dán địa chỉ ứng dụng web Apps Script (kết thúc bằng <code>/exec</code>). Dùng chung với Soạn thảo và Bảng tính.</p>
+      <fieldset class="col-fields">
+        <label>Địa chỉ nộp bài <input name="url" type="url" placeholder="https://script.google.com/macros/s/…/exec" /></label>
+        <label>Mã bảo vệ (nếu có) <input name="khoa" maxlength="40" autocomplete="off" /></label>
+      </fieldset>
+      <div class="dlg-row"><button type="button" id="testSubmit">Kiểm tra kết nối</button><span id="testResult" class="dlg-note"></span></div>
+      <div id="linkBox" class="link-box hidden">
+        <div class="dlg-note">Gửi đường link này cho học sinh (đã kèm địa chỉ nộp bài):</div>
+        <div class="dlg-row"><input id="studentLink" readonly /><button type="button" id="copyLink">Sao chép</button></div>
+      </div>
+      <div id="examBox" class="link-box hidden">
+        <div class="dlg-note"><b>Link kiểm tra</b> — ẩn gợi ý, tính giờ, mỗi em chỉ nộp một lần, hết giờ tự nộp:</div>
+        <div class="dlg-row"><select id="examLesson"></select><input id="examMinutes" type="number" min="5" max="180" value="30" class="exam-min" /> phút</div>
+        <div class="dlg-row"><input id="examLinkOut" readonly /><button type="button" id="copyExam">Sao chép</button></div>
+      </div>
+      <div class="dlg-actions"><button value="cancel" formnovalidate>Đóng</button><button value="ok" class="btn-primary">Lưu cài đặt</button></div>
+    </form>
+  </dialog>
+
+  <div class="show hidden" id="show" tabindex="-1"></div>
+  <div class="toast hidden" id="toast"></div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

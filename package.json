@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite",
     "dev:bang-tinh": "vite -c bang-tinh/vite.config.js",
-    "build": "vite build && vite build -c bang-tinh/vite.config.js",
-    "preview": "vite preview"
+    "build": "vite build && vite build -c bang-tinh/vite.config.js && vite build -c trinh-chieu/vite.config.js",
+    "preview": "vite preview",
+    "dev:trinh-chieu": "vite -c trinh-chieu/vite.config.js"
   },
   "devDependencies": {
     "vite": "^5.4.11",
@@ -29,6 +30,8 @@
     "docx": "^9.5.1",
     "exceljs": "^4.4.0",
     "fast-formula-parser": "^1.0.19",
-    "mammoth": "^1.11.0"
+    "jszip": "^3.10.2",
+    "mammoth": "^1.11.0",
+    "pptxgenjs": "^3.12.0"
   }
 }

@@ -36,7 +36,7 @@ function slug(u) {
 }
 // tiền tố chèn vào khoá lưu bài: 'stt:free' → 'stt:u-6a1-nguyễn_an:free'
 export function userKey(k) {
-  return k.replace(/^(stt|bt):/, `$1:${slug(currentUser())}:`)
+  return k.replace(/^(stt|bt|tc):/, `$1:${slug(currentUser())}:`)
 }
 
 export function setUser(u) {
@@ -49,7 +49,7 @@ export function endSession() {
 }
 
 function wipe(sl) {
-  for (const k of ls.keys()) if (/^(stt|bt):/.test(k) && k.split(':')[1] === sl) ls.del(k)
+  for (const k of ls.keys()) if (/^(stt|bt|tc):/.test(k) && k.split(':')[1] === sl) ls.del(k)
 }
 function touch(sl) {
   const users = ls.get(USERS_KEY) || {}
