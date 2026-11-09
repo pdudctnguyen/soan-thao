@@ -113,6 +113,14 @@ button, select, input { font: inherit; color: inherit; }
 .tiptap [data-resize-container][data-node="image"] { display: inline-flex !important; vertical-align: bottom; }
 .tiptap [data-resize-container][data-wrap="left"] { float: left; margin: 0.1cm 0.35cm 0.1cm 0; }
 .tiptap [data-resize-container][data-wrap="right"] { float: right; margin: 0.1cm 0 0.1cm 0.35cm; }
+/* trên và dưới: ảnh đứng riêng một khối, chữ ở trên và dưới */
+.tiptap [data-resize-container][data-node="image"][data-wrap="topBottom"] { display: flex !important; width: fit-content; margin: 0.15cm auto; }
+/* sau chữ / trước chữ: ảnh nằm tự do, không đẩy chữ; kéo để di chuyển */
+.tiptap :has(> [data-resize-container][data-wrap="behind"]), .tiptap :has(> [data-resize-container][data-wrap="front"]) { position: relative; }
+.tiptap [data-resize-container][data-node="image"][data-wrap="behind"], .tiptap [data-resize-container][data-node="image"][data-wrap="front"] { position: absolute !important; margin: 0; cursor: move; }
+.tiptap [data-resize-container][data-wrap="front"] { z-index: 4; }
+/* “sau chữ”: hoà trộn kiểu nhân (multiply) để chữ đen hiện lên trên ảnh, ảnh vẫn bấm chọn được */
+.tiptap [data-resize-container][data-wrap="behind"] { z-index: 3; mix-blend-mode: multiply; }
 .tiptap p::after { content: ''; }
 .tiptap { outline: none; min-height: 1em; }
 .tiptap p { margin: 0; }

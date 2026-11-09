@@ -5,7 +5,7 @@ import TextAlign from '@tiptap/extension-text-align'
 import Highlight from '@tiptap/extension-highlight'
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table'
 import Subscript from './subsup.js'
-import { ParagraphFormat, ListStyle, WrapImage, PageNumber, PageBreak, BULLET_STYLES, NUMBER_STYLES } from './extensions.js'
+import { ParagraphFormat, ListStyle, WrapImage, PageNumber, PageBreak, BULLET_STYLES, NUMBER_STYLES, FREE_WRAPS } from './extensions.js'
 import { Pagination, repaginate, geometry, PAGE_GAP } from './pagination.js'
 import { findNext, replaceAll, replaceCurrent, findAll } from './find-replace.js'
 import { PAGE_SIZES, DEFAULT_PAGE, applyPage } from './page.js'
@@ -324,7 +324,17 @@ function insertImageBlob(blob) {
       const max = 450
       const w = Math.min(img.naturalWidth, max)
       const h = Math.round((img.naturalHeight * w) / img.naturalWidth)
-      editor.chain().focus().setImage({ src: reader.result, width: w, height: h }).run()
+      // đang bôi đen chữ: chèn ảnh vào sau phần bôi đen, không thay mất chữ
+      const sel = editor.state.selection
+      const at = sel.empty ? sel.from : sel.to
+      editor.chain().focus().setTextSelection(at).setImage({ src: reader.result, width: w, height: h }).run()
+      // chọn luôn ảnh vừa chèn và mở tab Ảnh (giống Word)
+      const $pos = editor.state.selection.$from
+      const imgPos = $pos.nodeBefore?.type.name === 'image' ? $pos.pos - $pos.nodeBefore.nodeSize : null
+      if (imgPos != null) {
+        editor.commands.setNodeSelection(imgPos)
+        if (!$('#imageTab').classList.contains('hidden')) showTab('image')
+      }
     }
     img.src = reader.result
   }
@@ -632,6 +642,18 @@ for (const id of ['#bulletPop', '#numberPop']) {
 // Đổi thuộc tính ảnh rồi chọn lại ảnh (đổi thuộc tính làm mất vùng chọn → tab Ảnh sẽ biến mất)
 function updateImage(attrs) {
   const pos = editor.state.selection.from
+  // chuyển sang “sau chữ / trước chữ”: giữ ảnh đứng nguyên chỗ cũ trên trang
+  if (FREE_WRAPS.includes(attrs.wrap)) {
+    const cur = selectedImage()
+    const dom = editor.view.nodeDOM(pos)
+    const anchor = dom?.parentElement
+    if (cur && dom && anchor && !FREE_WRAPS.includes(cur.attrs.wrap)) {
+      const zoom = parseFloat(getComputedStyle($('#pageWrap')).zoom) || 1
+      const a = anchor.getBoundingClientRect()
+      const r = dom.getBoundingClientRect()
+      attrs = { ...attrs, posX: Math.round((r.left - a.left) / zoom), posY: Math.round((r.top - a.top) / zoom) }
+    }
+  }
   editor.chain().focus().updateAttributes('image', attrs).setNodeSelection(pos).run()
 }
 function selectedImage() {

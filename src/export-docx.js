@@ -231,6 +231,22 @@ async function imageRun(attrs, page) {
         wrap: { type: TextWrappingType.SQUARE, side: TextWrappingSide.BOTH_SIDES },
         margins: { left: 114300, right: 114300, top: 36000, bottom: 36000 },
       }
+    } else if (attrs.wrap === 'topBottom') {
+      opts.floating = {
+        horizontalPosition: { relative: HorizontalPositionRelativeFrom.COLUMN, align: HorizontalPositionAlign.CENTER },
+        verticalPosition: { relative: VerticalPositionRelativeFrom.PARAGRAPH, offset: 0 },
+        wrap: { type: TextWrappingType.TOP_AND_BOTTOM },
+        margins: { top: 54000, bottom: 54000 },
+      }
+    } else if (attrs.wrap === 'behind' || attrs.wrap === 'front') {
+      const EMU = 9525 // 1 px (96 dpi)
+      opts.floating = {
+        horizontalPosition: { relative: HorizontalPositionRelativeFrom.COLUMN, offset: Math.round((attrs.posX || 0) * EMU) },
+        verticalPosition: { relative: VerticalPositionRelativeFrom.PARAGRAPH, offset: Math.round((attrs.posY || 0) * EMU) },
+        wrap: { type: TextWrappingType.NONE },
+        behindDocument: attrs.wrap === 'behind',
+        allowOverlap: true,
+      }
     }
     return new ImageRun(opts)
   } catch (e) {

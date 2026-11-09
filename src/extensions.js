@@ -110,6 +110,10 @@ export const ListStyle = Extension.create({
 import Image from '@tiptap/extension-image'
 import { Node, mergeAttributes } from '@tiptap/core'
 
+// wrap: inline | left | right (chữ bao quanh) | topBottom (trên và dưới) | behind (sau chữ) | front (trước chữ)
+// posX/posY: vị trí (px) so với góc trên-trái của đoạn chứa ảnh — dùng cho “sau chữ” / “trước chữ”
+export const FREE_WRAPS = ['behind', 'front']
+const num = (v) => (v == null || v === '' || Number.isNaN(+v) ? null : +v)
 export const WrapImage = Image.extend({
   addAttributes() {
     return {
@@ -119,6 +123,8 @@ export const WrapImage = Image.extend({
         parseHTML: (el) => el.getAttribute('data-wrap') || 'inline',
         renderHTML: (attrs) => (attrs.wrap && attrs.wrap !== 'inline' ? { 'data-wrap': attrs.wrap } : {}),
       },
+      posX: { default: null, parseHTML: (el) => num(el.getAttribute('data-x')), renderHTML: (a) => (a.posX == null ? {} : { 'data-x': a.posX }) },
+      posY: { default: null, parseHTML: (el) => num(el.getAttribute('data-y')), renderHTML: (a) => (a.posY == null ? {} : { 'data-y': a.posY }) },
     }
   },
   addNodeView() {
@@ -126,22 +132,65 @@ export const WrapImage = Image.extend({
     if (!parentFactory) return null
     return (props) => {
       const nv = parentFactory(props)
-      const apply = (node) => {
-        nv.dom.dataset.wrap = node.attrs.wrap || 'inline'
+      let node = props.node
+      const apply = (n) => {
+        node = n
+        const wrap = n.attrs.wrap || 'inline'
+        nv.dom.dataset.wrap = wrap
+        const free = FREE_WRAPS.includes(wrap)
+        nv.dom.style.left = free ? `${n.attrs.posX || 0}px` : ''
+        nv.dom.style.top = free ? `${n.attrs.posY || 0}px` : ''
         // nút kích thước đổi thuộc tính width/height: cập nhật lại ảnh đang hiển thị
         const img = nv.dom.querySelector('img')
-        if (img && node.attrs.width) {
-          img.style.width = `${node.attrs.width}px`
-          img.style.height = node.attrs.height ? `${node.attrs.height}px` : 'auto'
+        if (img && n.attrs.width) {
+          img.style.width = `${n.attrs.width}px`
+          img.style.height = n.attrs.height ? `${n.attrs.height}px` : 'auto'
         }
       }
       apply(props.node)
       const update = nv.update.bind(nv)
-      nv.update = (node, d, i) => {
-        const ok = update(node, d, i)
-        if (ok) apply(node)
+      nv.update = (n, d, i) => {
+        const ok = update(n, d, i)
+        if (ok) apply(n)
         return ok
       }
+      // kéo ảnh “sau chữ” / “trước chữ” đi tự do
+      nv.dom.addEventListener('mousedown', (e) => {
+        if (e.button !== 0 || !FREE_WRAPS.includes(node.attrs.wrap) || e.target.closest('[data-resize-handle]')) return
+        if (!props.editor.isEditable) return
+        e.preventDefault()
+        const pos = props.getPos()
+        if (typeof pos !== 'number') return
+        props.editor.commands.setNodeSelection(pos)
+        const zoom = parseFloat(getComputedStyle(nv.dom.closest('.page-wrap') || document.body).zoom) || 1
+        const x0 = node.attrs.posX || 0
+        const y0 = node.attrs.posY || 0
+        const sx = e.clientX
+        const sy = e.clientY
+        let moved = false
+        const mm = (ev) => {
+          const dx = (ev.clientX - sx) / zoom
+          const dy = (ev.clientY - sy) / zoom
+          if (!moved && Math.abs(dx) + Math.abs(dy) < 3) return
+          moved = true
+          nv.dom.style.left = `${Math.round(x0 + dx)}px`
+          nv.dom.style.top = `${Math.round(y0 + dy)}px`
+        }
+        const mu = () => {
+          document.removeEventListener('mousemove', mm)
+          document.removeEventListener('mouseup', mu)
+          if (!moved) return
+          const p = props.getPos()
+          if (typeof p !== 'number') return
+          const attrs = { ...node.attrs, posX: parseInt(nv.dom.style.left, 10) || 0, posY: parseInt(nv.dom.style.top, 10) || 0 }
+          const { state, view } = props.editor
+          const tr = state.tr.setNodeMarkup(p, undefined, attrs)
+          view.dispatch(tr)
+          props.editor.commands.setNodeSelection(p)
+        }
+        document.addEventListener('mousemove', mm)
+        document.addEventListener('mouseup', mu)
+      })
       return nv
     }
   },
